@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
-
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kahibawhub_revamp/utils/ui_helpers.dart';
 import '../layouts/circle_background.dart';
+import '../models/app_user.dart';
+import '../services/auth_service.dart';
 import '../themes/colors.dart';
-import '../widgets/custom_text_form_field.dart'; // Import phosphor icons
+import '../widgets/custom_text_form_field.dart';
+import '../providers/auth_provider.dart';
 
-class AuthScreen extends StatefulWidget {
+class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
 
   @override
-  State<AuthScreen> createState() => _AuthScreenState();
+  ConsumerState<AuthScreen> createState() => _AuthScreenState();
 }
 
-class _AuthScreenState extends State<AuthScreen> {
+class _AuthScreenState extends ConsumerState<AuthScreen> {
   final _form = GlobalKey<FormState>();
   bool isRegister = true;
   bool showPassword = true;
@@ -42,22 +45,31 @@ class _AuthScreenState extends State<AuthScreen> {
     });
 
     _form.currentState!.save();
-    // AuthUser user = AuthUser(
-    //   name: _usernameController.text,
-    //   password: _passwordController.text,
-    //   email: _emailController.text,
-    //   context: context,
-    // );
+    final authService = ref.read(authServiceProvider);
 
     try {
+      late AppUser user;
       if (isRegister) {
-        // await user.register();
+        user = await authService.register(
+          firstName: _firstNameController.text,
+          lastName: _lastNameController.text,
+          email: _emailController.text,
+          password: _passwordController.text,
+        );
       } else {
-        // await user.login();
+        // user = await authService.login(
+        //   email: _emailController.text,
+        //   password: _passwordController.text,
+        // );
       }
-      Navigator.of(context).pushReplacementNamed('/redirect');
+
+      // Save user to global state
+      ref.read(userProvider.notifier).setUser(user);
+
+      // Navigate to dashboard or redirect screen
+      Navigator.of(context).pushReplacementNamed('/profile');
     } catch (error) {
-      // Handle any errors that might occur during login/register
+      showError(context: context, errorMessage: error.toString(), errorTitle: 'Authentication Error');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Authentication failed: ${error.toString()}')),
       );
@@ -70,7 +82,6 @@ class _AuthScreenState extends State<AuthScreen> {
       }
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -109,7 +120,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   isRegister ? CustomTextFormField(
                     label: 'First Name',
                     hintText: 'Enter your first name',
-                    controller: _emailController,
+                    controller: _firstNameController, // Fixed: was using _emailController
                     prefixIcon: Icons.person_outline_outlined,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -146,9 +157,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     isPassword: true,
                     prefixIcon: Icons.lock_outline,
                   ),
-                  const SizedBox(
-                    height: 30,
-                  ),
+                  const SizedBox(height: 30),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -157,9 +166,8 @@ class _AuthScreenState extends State<AuthScreen> {
                         backgroundColor: primaryColor,
                         padding: const EdgeInsets.symmetric(vertical: 15),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10), // Set border radius here
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        // Button will be disabled when isLoading is true
                         disabledBackgroundColor: primaryColor.withOpacity(0.7),
                       ),
                       child: isLoading
@@ -178,67 +186,12 @@ class _AuthScreenState extends State<AuthScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  // Row(
-                  //   children: [
-                  //     Expanded(child: Divider(color: Colors.grey.shade400)),
-                  //     Padding(
-                  //       padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  //       child: Text(
-                  //         "OR",
-                  //         style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w500),
-                  //       ),
-                  //     ),
-                  //     Expanded(child: Divider(color: Colors.grey.shade400)),
-                  //   ],
-                  // ),
-
-                  // const SizedBox(height: 20),
-                  //
-                  // // Google Sign-In Button
-                  // SizedBox(
-                  //   width: double.infinity,
-                  //   child: ElevatedButton.icon(
-                  //     onPressed: isGoogleLoading ? null : signInWithGoogle,
-                  //     style: ElevatedButton.styleFrom(
-                  //       backgroundColor: Colors.white,
-                  //       foregroundColor: Colors.black87,
-                  //       padding: const EdgeInsets.symmetric(vertical: 12),
-                  //       elevation: 1,
-                  //       shape: RoundedRectangleBorder(
-                  //         borderRadius: BorderRadius.circular(10),
-                  //         side: BorderSide(color: Colors.grey.shade300),
-                  //       ),
-                  //     ),
-                  //     icon: isGoogleLoading
-                  //         ? const SizedBox(
-                  //       height: 20,
-                  //       width: 20,
-                  //       child: CircularProgressIndicator(
-                  //         strokeWidth: 3,
-                  //         color: primaryColor,
-                  //       ),
-                  //     )
-                  //         :  Icon(
-                  //       PhosphorIcons.googleLogo(),
-                  //       size: 20,
-                  //       color: Colors.red,
-                  //     ),
-                  //     label: Text(
-                  //       isRegister ? "Register with Google" : "Login with Google",
-                  //       style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                  //     ),
-                  //   ),
-                  // ),
-
-                  const SizedBox(height: 20),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
                         isRegister ? 'Already a User?' : 'New to KahibawHub?',
-                        style: const TextStyle(
-                          fontSize: 16,
-                        ),
+                        style: const TextStyle(fontSize: 16),
                       ),
                       const SizedBox(width: 5),
                       GestureDetector(
