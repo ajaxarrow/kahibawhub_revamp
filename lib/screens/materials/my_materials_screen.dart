@@ -52,7 +52,7 @@ class _MyMaterialsScreenState extends State<MyMaterialsScreen> {
   // Fetch materials from the backend using the controller
   void _fetchMaterials() async {
     final materialsController = LearningMaterialController();
-    final fetchedMaterials = await materialsController.fetchAllMaterials();
+    final fetchedMaterials = await materialsController.fetchAll();
     setState(() {
       materials = fetchedMaterials;
       filteredMaterials = materials;

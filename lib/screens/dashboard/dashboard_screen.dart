@@ -61,6 +61,7 @@ class DashboardScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    const SizedBox(height: 10,),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -68,22 +69,23 @@ class DashboardScreen extends StatelessWidget {
                           'Analytics Overview',
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                         ),
-                        TextButton(
-                          onPressed: () {
-                            Navigator.of(context).pushNamed('/engagements');
-                          },
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text('See All'),
-                              SizedBox(width: 6),
-                              PhosphorIcon(PhosphorIconsRegular.caretRight, size: 16),
-                            ],
-                          ),
-                        ),
+                        // TextButton(
+                        //   onPressed: () {
+                        //     Navigator.of(context).pushNamed('/engagements');
+                        //   },
+                        //   child: const Row(
+                        //     mainAxisAlignment: MainAxisAlignment.center,
+                        //     mainAxisSize: MainAxisSize.min,
+                        //     children: [
+                        //       Text('See All'),
+                        //       SizedBox(width: 6),
+                        //       PhosphorIcon(PhosphorIconsRegular.caretRight, size: 16),
+                        //     ],
+                        //   ),
+                        // ),
                       ],
                     ),
+                    const SizedBox(height: 10,),
                     GridView.builder(
                       shrinkWrap: true,
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -181,7 +183,7 @@ class DashboardScreen extends StatelessWidget {
                       ],
                     ),
                     FutureBuilder<List<LearningMaterial>>(
-                      future: LearningMaterialController().fetchAllMaterials(limit: 2), // Fetching materials
+                      future: LearningMaterialController().fetchAll(limit: 2), // Fetching materials
                       builder: (context, snapshot) {
                         if (snapshot.connectionState == ConnectionState.waiting) {
                           return const Center(child: CircularProgressIndicator());

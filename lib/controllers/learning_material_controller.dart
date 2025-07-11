@@ -4,7 +4,7 @@ import '../plugins/dio.config.dart';
 class LearningMaterialController {
 
 
-  Future<List<LearningMaterial>> fetchAllMaterials({int? limit}) async {
+  Future<List<LearningMaterial>> fetchAll({int? limit}) async {
     try {
       final res = await dio.get('/apiBrowsing/getAllMaterials?type=browse');
       final List<LearningMaterial> materials = [];

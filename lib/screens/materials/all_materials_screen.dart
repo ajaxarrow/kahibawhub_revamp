@@ -39,7 +39,7 @@ class _AllMaterialsScreenState extends State<AllMaterialsScreen> {
   Future<void> _fetchMaterials() async {
     setState(() => isLoading = true);
     final materialsController = LearningMaterialController();
-    final fetchedMaterials = await materialsController.fetchAllMaterials();
+    final fetchedMaterials = await materialsController.fetchAll();
     setState(() {
       materials = fetchedMaterials;
       filteredMaterials = materials;
