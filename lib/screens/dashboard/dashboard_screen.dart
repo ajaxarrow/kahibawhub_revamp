@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:kahibawhub_revamp/controllers/platform_metrics_controller.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../controllers/learning_material_controller.dart';
 import '../../layouts/main_layout.dart';
 import '../../models/learning_material.dart';
+import '../../models/platform_metrics.dart';
+import '../../themes/colors.dart';
 import '../../widgets/materials/material_item.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -12,12 +15,6 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final analyticsData = [
-      {"label": "Users", "value": 230, "rate": 3.0, "indication": "down"},
-      {"label": "Contributors", "value": 312, "rate": 3.0, "indication": "down"},
-      {"label": "Read", "value": 558, "rate": 3.0, "indication": "up"},
-      {"label": "Institutions", "value": 20, "rate": 3.7, "indication": "up"},
-    ];
 
     return MainLayout(
       index: 0,
@@ -86,76 +83,123 @@ class DashboardScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 10,),
-                    GridView.builder(
-                      shrinkWrap: true,
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 12.0,
-                        mainAxisSpacing: 12.0,
-                        mainAxisExtent: 140,
-                      ),
-                      itemCount: analyticsData.length,
-                      itemBuilder: (context, index) {
-                        return Card(
-                          elevation: 0,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: const Color(0xffe4e4e4), width: 1),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    (analyticsData[index]['value'] as int).toString(),
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
-                                  ),
-                                  const SizedBox(height: 8.0),
-                                  Text(
-                                    analyticsData[index]['label'] as String,
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(color: Color(0xff696974)),
-                                  ),
-                                  const SizedBox(height: 8.0),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    mainAxisSize: MainAxisSize.min,
+                    FutureBuilder<PlatformMetrics>(
+                      future: PlatformMetricsController().fetchMetrics(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+
+                        if (snapshot.hasError || !snapshot.hasData) {
+                          return const Center(child: Text('Error loading analytics data'));
+                        }
+
+                        final metrics = snapshot.data!;
+                        final analyticsData = [
+                          {
+                            'label': 'Users',
+                            'value': metrics.totalUsers,
+                            'icon': PhosphorIconsRegular.users,
+                            'color': primaryColor,
+                          },
+                          {
+                            'label': 'Materials',
+                            'value': metrics.totalMaterials,
+                            'icon': PhosphorIconsRegular.books,
+                            'color': successColor,
+                          },
+                          {
+                            'label': 'Reads',
+                            'value': metrics.totalReads,
+                            'icon': PhosphorIconsRegular.eye,
+                            'color': successColor,
+                          },
+                          {
+                            'label': 'Institutions',
+                            'value': metrics.totalInstitutions,
+                            'icon': PhosphorIconsRegular.buildings,
+                            'color': primaryColor,
+                          },
+                        ];
+
+                        return GridView.builder(
+                          shrinkWrap: true,
+                          itemCount: analyticsData.length,
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 12.0,
+                            mainAxisSpacing: 12.0,
+                            mainAxisExtent: 140,
+                          ),
+                          itemBuilder: (context, index) {
+                            final data = analyticsData[index];
+                            final value = data['value'] as int;
+                            final label = data['label'] as String;
+                            final icon = data['icon'] as PhosphorIconData;
+                            final color = data['color'] as Color;
+
+                            return Card(
+                              elevation: 0,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: borderColor, width: 1),
+                                  color: Colors.white,
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            value.toString(),
+                                            style: const TextStyle(
+                                              fontSize: 22,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          Container(
+                                            padding: const EdgeInsets.all(8),
+                                            decoration: BoxDecoration(
+                                              color: color.withOpacity(0.1),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: PhosphorIcon(
+                                              icon,
+                                              size: 20,
+                                              color: color,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 12.0),
                                       Text(
-                                        analyticsData[index]['indication'] as String == 'up' ? '+' : '-',
-                                        style: TextStyle(
-                                          color: analyticsData[index]['indication'] as String == 'up'
-                                              ? Colors.green
-                                              : Colors.red,
+                                        label,
+                                        style: const TextStyle(
+                                          color: Color(0xff696974),
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w500,
                                         ),
                                       ),
-                                      Text(
-                                        (analyticsData[index]['rate'] as double).toString(),
-                                        style: TextStyle(
-                                          color: analyticsData[index]['indication'] as String == 'up'
-                                              ? Colors.green
-                                              : Colors.red,
+                                      const SizedBox(height: 8.0),
+                                      // Optional: Add a subtle progress indicator or accent line
+                                      Container(
+                                        height: 3,
+                                        width: 40,
+                                        decoration: BoxDecoration(
+                                          color: color.withOpacity(0.3),
+                                          borderRadius: BorderRadius.circular(2),
                                         ),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      PhosphorIcon(
-                                        analyticsData[index]['indication'] as String == 'up'
-                                            ? PhosphorIconsRegular.arrowUp
-                                            : PhosphorIconsRegular.arrowDown,
-                                        size: 14,
-                                        color: analyticsData[index]['indication'] as String == 'up'
-                                            ? Colors.green
-                                            : Colors.red,
                                       ),
                                     ],
                                   ),
-                                ],
+                                ),
                               ),
-                            ),
-                          ),
+                            );
+                          },
                         );
                       },
                     ),
