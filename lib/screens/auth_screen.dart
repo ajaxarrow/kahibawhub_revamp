@@ -57,10 +57,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           password: _passwordController.text,
         );
       } else {
-        // user = await authService.login(
-        //   email: _emailController.text,
-        //   password: _passwordController.text,
-        // );
+        user = await authService.login(
+          email: _emailController.text,
+          password: _passwordController.text,
+        );
       }
 
       // Save user to global state
