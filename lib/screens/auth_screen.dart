@@ -67,7 +67,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       ref.read(userProvider.notifier).setUser(user);
 
       // Navigate to dashboard or redirect screen
-      Navigator.of(context).pushReplacementNamed('/profile');
+      Navigator.of(context).pushReplacementNamed('/dashboard');
     } catch (error) {
       showError(context: context, errorMessage: error.toString(), errorTitle: 'Authentication Error');
       ScaffoldMessenger.of(context).showSnackBar(
