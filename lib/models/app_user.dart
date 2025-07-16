@@ -27,6 +27,7 @@ class AppUser {
       lastName: map['lastName'],
       email: map['email'],
       dateRegistered: map['dateRegistered'],
+      userProfile: map['userProfile'] != null ? UserProfile.fromMap(map['userProfile']) : null,
     );
   }
 
@@ -38,21 +39,34 @@ class AppUser {
       'lastName': lastName,
       'email': email,
       'dateRegistered': dateRegistered,
+      'userProfile': userProfile?.toMap(),
     };
   }
 
+  // Method to update user profile
+  void updateUserProfile(UserProfile newProfile) {
+    userProfile = newProfile;
+  }
 
+  // Method to check if profile is complete
+  bool get isProfileComplete {
+    return userProfile != null &&
+        userProfile!.occupation != null &&
+        userProfile!.primaryInstitution != null &&
+        userProfile!.userType != null;
+  }
 
   // toString override
   @override
   String toString() {
     return '''
-    Author{
+    AppUser{
       id: $id, 
       firstName: $firstName, 
       lastName: $lastName, 
       email: $email, 
-      dateRegistered: $dateRegistered}
+      dateRegistered: $dateRegistered,
+      userProfile: $userProfile}
     ''';
   }
 }

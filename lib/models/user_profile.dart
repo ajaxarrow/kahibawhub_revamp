@@ -97,6 +97,7 @@ class UserProfile {
     };
   }
 
+
   @override
   String toString() {
     return 'UserProfile(id: $id, userID: $userID, firstName: $firstName, lastName: $lastName, '

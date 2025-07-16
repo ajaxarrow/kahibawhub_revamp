@@ -8,6 +8,7 @@ import '../services/auth_service.dart';
 import '../themes/colors.dart';
 import '../widgets/custom_text_form_field.dart';
 import '../providers/auth_provider.dart';
+import 'complete_profile_screen.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
@@ -45,6 +46,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       isLoading = true;
     });
 
+    // Replace the auth service code with this modified version
+
     _form.currentState!.save();
     final authService = ref.read(authServiceProvider);
 
@@ -57,18 +60,31 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           email: _emailController.text,
           password: _passwordController.text,
         );
+
+        // Save user to global state
+        ref.read(userProvider.notifier).setUser(user);
+
+        // Navigate to complete profile screen for new registrations
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => CompleteProfileScreen(
+              isCompleting: true,
+              userId: user.id,
+            ),
+          ),
+        );
       } else {
         user = await authService.login(
           email: _emailController.text,
           password: _passwordController.text,
         );
+
+        // Save user to global state
+        ref.read(userProvider.notifier).setUser(user);
+
+        // Navigate to dashboard for existing users
+        Navigator.of(context).pushReplacementNamed('/dashboard');
       }
-
-      // Save user to global state
-      ref.read(userProvider.notifier).setUser(user);
-
-      // Navigate to dashboard or redirect screen
-      Navigator.of(context).pushReplacementNamed('/dashboard');
     } on DioException catch (e) {
       String action = isRegister ? 'Registration' : 'Login';
       String errorTitle = '$action Error';
