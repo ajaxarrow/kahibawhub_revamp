@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kahibawhub_revamp/utils/ui_helpers.dart';
@@ -68,13 +69,42 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
       // Navigate to dashboard or redirect screen
       Navigator.of(context).pushReplacementNamed('/dashboard');
-    } catch (error) {
-      showError(context: context, errorMessage: error.toString(), errorTitle: 'Authentication Error');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Authentication failed: ${error.toString()}')),
+    } on DioException catch (e) {
+      String action = isRegister ? 'Registration' : 'Login';
+      String errorTitle = '$action Error';
+      String errorMessage = '$action failed';
+
+      if (e.response != null) {
+        final statusCode = e.response!.statusCode;
+        final responseData = e.response!.data;
+
+        if (responseData is Map<String, dynamic> && responseData.containsKey('error')) {
+          errorMessage = responseData['error'] ?? errorMessage;
+        }
+
+        print('$action failed (Status: $statusCode): $errorMessage');
+      } else {
+        errorMessage = '$action failed: Network error - ${e.message}';
+        print(errorMessage);
+      }
+
+      showError(
+        context: context,
+        errorMessage: errorMessage,
+        errorTitle: errorTitle,
+      );
+
+    }
+    catch (error) {
+
+      // Show error dialog
+      showError(
+          context: context,
+          errorMessage: error.toString(),
+          errorTitle: 'Error Occurred'
       );
     } finally {
-      // If navigation doesn't happen (due to error), reset loading state
+      // Reset loading state if still mounted
       if (mounted) {
         setState(() {
           isLoading = false;
