@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:kahibawhub_revamp/screens/profile_screen.dart';
 import 'dart:io';
 
 import '../layouts/circle_background.dart';
@@ -169,17 +170,23 @@ class _CompleteProfileScreenState extends ConsumerState<CompleteProfileScreen> {
         'province': _provinceController.text,
         'cityOrBarangay': _cityOrBarangayController.text,
         'zipCode': _zipCodeController.text,
-        'fbLink': _fbLinkController.text,
-        'twitterLink': _twitterLinkController.text,
-        'IGLink': _instagramLinkController.text,
-        'INLink': _linkedinLinkController.text,
       };
+
+
 
       // Update user profile using controller
       final appUserController = AppUserController();
       await appUserController.updateUserProfile(
         userId: userId,
         profileData: profileData,
+      );
+
+      await appUserController.updateSocialLinks(
+        userId: userId,
+        fbUrl: _fbLinkController.text,
+        instagram: _instagramLinkController.text,
+        twitter: _twitterLinkController.text,
+        linkedin: _linkedinLinkController.text,
       );
 
       // Upload image if selected
@@ -212,7 +219,14 @@ class _CompleteProfileScreenState extends ConsumerState<CompleteProfileScreen> {
       if (widget.isCompleting) {
         Navigator.of(context).pushReplacementNamed('/dashboard');
       } else {
-        Navigator.of(context).pop();
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => ProfileScreen(
+              userData: user,
+              userId: user?.id,
+            ),
+          ),
+        );
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(

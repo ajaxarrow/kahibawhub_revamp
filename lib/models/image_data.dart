@@ -5,6 +5,7 @@ class ImageData{
   final List<dynamic> data;
 
   factory ImageData.fromMap(Map<String, dynamic> map) {
+
     return ImageData(
       type: map['type'],
       data: List<dynamic>.from(map['data'] ?? []),
