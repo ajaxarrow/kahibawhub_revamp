@@ -1,32 +1,46 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../controllers/learning_material_controller.dart';
 import '../../layouts/main_layout.dart';
 import '../../models/learning_material.dart';
+import '../../providers/auth_provider.dart';
 import '../../themes/colors.dart';
 import '../../widgets/custom_text_form_field.dart';
 import '../../widgets/materials/material_item.dart';
 
-class MyMaterialsScreen extends StatefulWidget {
+class MyMaterialsScreen extends ConsumerStatefulWidget {
   const MyMaterialsScreen({super.key});
 
   @override
-  State<MyMaterialsScreen> createState() => _MyMaterialsScreenState();
+  ConsumerState<MyMaterialsScreen> createState() => _MyMaterialsScreenState();
 }
 
-class _MyMaterialsScreenState extends State<MyMaterialsScreen> {
+class _MyMaterialsScreenState extends ConsumerState<MyMaterialsScreen> {
   final TextEditingController searchQueryController = TextEditingController();
   List<LearningMaterial> filteredMaterials = [];
   List<LearningMaterial> materials = [];
   bool isLoading = true; // Loading state
+  bool _hasInitialized = false;
 
   @override
   void initState() {
     super.initState();
     searchQueryController.addListener(_filterMaterials);
-    _fetchMaterials();
+    // _fetchMaterials();
   }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Only fetch materials once when dependencies are available
+    if (!_hasInitialized) {
+      _hasInitialized = true;
+      _fetchMaterials();
+    }
+  }
+
 
   @override
   void dispose() {
@@ -39,27 +53,39 @@ class _MyMaterialsScreenState extends State<MyMaterialsScreen> {
     setState(() => isLoading = true); // Show loading indicator during search
     final query = searchQueryController.text.toLowerCase();
     Future.delayed(const Duration(milliseconds: 500), () {
-      setState(() {
-        filteredMaterials = materials.where((material) {
-          return material.title!.toLowerCase().contains(query) ||
-              material.description!.toLowerCase().contains(query);
-        }).toList();
-        isLoading = false; // Hide loader after search
-      });
+      if (mounted) { // Check if widget is still mounted
+        setState(() {
+          filteredMaterials = materials.where((material) {
+            return material.title!.toLowerCase().contains(query) ||
+                material.description!.toLowerCase().contains(query);
+          }).toList();
+          isLoading = false; // Hide loader after search
+        });
+      }
     });
   }
 
   // Fetch materials from the backend using the controller
   void _fetchMaterials() async {
-    final materialsController = LearningMaterialController();
-    final fetchedMaterials = await materialsController.fetchAll();
-    setState(() {
-      materials = fetchedMaterials;
-      filteredMaterials = materials;
-      isLoading = false; // Hide loader after fetching
-    });
+    final user = ref.watch(userProvider);
+    if (user?.id != null) {
+      final materialsController = LearningMaterialController();
+      final fetchedMaterials = await materialsController.fetchByUserID(userID: user!.id!);
+      if (mounted) { // Check if widget is still mounted
+        setState(() {
+          materials = fetchedMaterials;
+          filteredMaterials = materials;
+          isLoading = false; // Hide loader after fetching
+        });
+      }
+    } else {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
   }
-
   @override
   Widget build(BuildContext context) {
     return MainLayout(

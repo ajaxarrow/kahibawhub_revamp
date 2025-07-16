@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kahibawhub_revamp/controllers/platform_metrics_controller.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
@@ -6,15 +7,22 @@ import '../../controllers/learning_material_controller.dart';
 import '../../layouts/main_layout.dart';
 import '../../models/learning_material.dart';
 import '../../models/platform_metrics.dart';
+import '../../providers/auth_provider.dart';
 import '../../themes/colors.dart';
 import '../../widgets/materials/material_item.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
 
   const DashboardScreen({super.key, });
 
   @override
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  @override
   Widget build(BuildContext context) {
+    final user = ref.watch(userProvider);
 
     return MainLayout(
       index: 0,
@@ -31,12 +39,12 @@ class DashboardScreen extends StatelessWidget {
                 bottomLeft: Radius.circular(30),
               ),
             ),
-            child: const Column(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SizedBox(height: 10),
                 Text(
-                  'Hello User!',
+                  'Hello ${user != null ? user.firstName : 'User'}!',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,

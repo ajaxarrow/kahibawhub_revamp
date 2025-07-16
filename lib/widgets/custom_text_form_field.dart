@@ -16,7 +16,8 @@ class CustomTextFormField extends StatelessWidget {
     this.onChanged,
     this.borderColor = const Color(0xffe4e4e4),
     this.fillColor = Colors.white,
-    this.isTextArea = false
+    this.isTextArea = false,
+    this.maxLines = 1,
   });
 
   final String hintText;
@@ -29,6 +30,7 @@ class CustomTextFormField extends StatelessWidget {
   final Color borderColor;
   final Color fillColor;
   final bool isTextArea;
+  final int maxLines;
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +45,7 @@ class CustomTextFormField extends StatelessWidget {
         ) : SizedBox.shrink(),
         label != null ? SizedBox(height: 10) : SizedBox.shrink(),
         TextFormField(
-          maxLines: isTextArea ? 5 : 1,
+          maxLines: isTextArea ? maxLines : 1,
           controller: controller,
           obscureText: isPassword,
           validator: validator ?? (value) => null,
