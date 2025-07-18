@@ -307,7 +307,12 @@ class MaterialItem extends StatelessWidget {
                                 //       fontSize: 12,
                                 //     )
                                 // )
-                                Text(material.author)
+                                Text(material.author,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                  )
+
+                                )
 
                               ],
                             )

@@ -1,5 +1,7 @@
 import 'package:kahibawhub_revamp/models/image_data.dart';
 
+import '../utils/fallback_utils.dart';
+
 class UserProfile {
   UserProfile({
     this.id,
@@ -49,17 +51,17 @@ class UserProfile {
     return UserProfile(
       id: map['_id'],
       userID: map['userId'],
-      firstName: map['firstName'],
-      lastName: map['lastName'],
-      primaryInstitution: map['primaryInstitution'],
+      firstName: fallbackIfEmpty(map['firstName']),
+      lastName: fallbackIfEmpty(map['lastName']),
+      primaryInstitution: fallbackIfEmpty(map['primaryInstitution']),
       userType: map['userType'],
       disciplines: List<String>.from(map['disciplines'] ?? []),
-      description: map['description'],
-      phoneNumber: map['phoneNumber'],
-      personalWebUrl: map['personalWebUrl'],
-      province: map['province'],
-      cityOrBarangay: map['cityOrBarangay'],
-      zipCode: map['zipCode'],
+      description: fallbackIfEmpty(map['description']),
+      phoneNumber: fallbackIfEmpty(map['phoneNumber']),
+      personalWebUrl: fallbackIfEmpty(map['personalWebUrl']),
+      province: fallbackIfEmpty(map['province']),
+      cityOrBarangay: fallbackIfEmpty(map['cityOrBarangay']),
+      zipCode: fallbackIfEmpty(map['zipCode']),
       userImage: map['userImage'] != null
           ? ImageData.fromMap(map['userImage'] as Map<String, dynamic>)
           : null,
