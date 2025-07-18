@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -224,13 +226,10 @@ class _CompleteProfileScreenState extends ConsumerState<CompleteProfileScreen> {
   }
 
 
-
-
-
-
-
   @override
   Widget build(BuildContext context) {
+    final user = ref.read(userProvider);
+    final imageData = user?.userProfile?.userImage?.data;
     return CircleBackground(
       child: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -273,9 +272,14 @@ class _CompleteProfileScreenState extends ConsumerState<CompleteProfileScreen> {
                               ),
                               image: DecorationImage(
                                 image: _pickedImage != null
-                                    ? FileImage(_pickedImage!)
-                                    : AssetImage(imagePath) as ImageProvider,
+                                    ? FileImage(_pickedImage!) as ImageProvider
+                                    : (imageData != null && imageData.isNotEmpty)
+                                    ? MemoryImage(Uint8List.fromList(imageData.cast<int>()))
+                                    : const AssetImage('lib/assets/images/user-placeholder.jpg'),
                                 fit: BoxFit.cover,
+                                onError: (exception, stackTrace) {
+                                  // Optional: log or handle the error
+                                },
                               ),
                             ),
                           ),

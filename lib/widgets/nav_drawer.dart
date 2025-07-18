@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'dart:typed_data';
 import '../providers/auth_provider.dart';
 import '../themes/colors.dart';
 
@@ -16,6 +17,9 @@ class _NavDrawerState extends ConsumerState<NavDrawer> {
   Widget build(BuildContext context) {
     final user = ref.watch(userProvider);
     final isLoggedIn = ref.watch(isLoggedInProvider);
+
+    // Get image data from user profile
+    final imageData = user?.userProfile?.userImage?.data;
 
     return Drawer(
       shape: const UnderlineInputBorder(
@@ -39,12 +43,21 @@ class _NavDrawerState extends ConsumerState<NavDrawer> {
             currentAccountPicture: CircleAvatar(
               radius: 12,
               backgroundColor: primaryColor,
-              child: ClipOval(
-                child: Image.asset(
-                  'lib/assets/images/user-placeholder.jpg',
-                  width: 90,
-                  height: 90,
-                  fit: BoxFit.cover,
+              child: Container(
+                width: 90,
+                height: 90,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  image: DecorationImage(
+                    image: (imageData != null && imageData.isNotEmpty)
+                        ? MemoryImage(Uint8List.fromList(imageData.cast<int>()))
+                        : const AssetImage('lib/assets/images/user-placeholder.jpg'),
+                    fit: BoxFit.cover,
+                    onError: (exception, stackTrace) {
+                      // Optional: log or handle the error
+                      print('Error loading profile image: $exception');
+                    },
+                  ),
                 ),
               ),
             ),
