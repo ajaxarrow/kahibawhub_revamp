@@ -7,6 +7,7 @@ import '../../layouts/main_layout.dart';
 import '../../models/learning_material.dart';
 import '../../providers/auth_provider.dart';
 import '../../themes/colors.dart';
+import '../../utils/ui_helpers.dart';
 import '../../widgets/custom_text_form_field.dart';
 import '../../widgets/materials/material_item.dart';
 
@@ -19,16 +20,19 @@ class MyMaterialsScreen extends ConsumerStatefulWidget {
 
 class _MyMaterialsScreenState extends ConsumerState<MyMaterialsScreen> {
   final TextEditingController searchQueryController = TextEditingController();
-  List<LearningMaterial> filteredMaterials = [];
   List<LearningMaterial> materials = [];
-  bool isLoading = true; // Loading state
+  List<LearningMaterial> filteredMaterials = [];
+  bool isLoading = true;
   bool _hasInitialized = false;
+
+  // Filter options (excluding authors)
+  List<String> selectedDisciplines = [];
+  List<String> selectedAccessibility = [];
 
   @override
   void initState() {
     super.initState();
     searchQueryController.addListener(_filterMaterials);
-    // _fetchMaterials();
   }
 
   @override
@@ -41,7 +45,6 @@ class _MyMaterialsScreenState extends ConsumerState<MyMaterialsScreen> {
     }
   }
 
-
   @override
   void dispose() {
     searchQueryController.removeListener(_filterMaterials);
@@ -49,33 +52,18 @@ class _MyMaterialsScreenState extends ConsumerState<MyMaterialsScreen> {
     super.dispose();
   }
 
-  void _filterMaterials() {
-    setState(() => isLoading = true); // Show loading indicator during search
-    final query = searchQueryController.text.toLowerCase();
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (mounted) { // Check if widget is still mounted
-        setState(() {
-          filteredMaterials = materials.where((material) {
-            return material.title!.toLowerCase().contains(query) ||
-                material.description!.toLowerCase().contains(query);
-          }).toList();
-          isLoading = false; // Hide loader after search
-        });
-      }
-    });
-  }
-
-  // Fetch materials from the backend using the controller
-  void _fetchMaterials() async {
+  Future<void> _fetchMaterials() async {
     final user = ref.watch(userProvider);
     if (user?.id != null) {
+      setState(() => isLoading = true);
       final materialsController = LearningMaterialController();
       final fetchedMaterials = await materialsController.fetchByUserID(userID: user!.id!);
-      if (mounted) { // Check if widget is still mounted
+
+      if (mounted) {
         setState(() {
           materials = fetchedMaterials;
           filteredMaterials = materials;
-          isLoading = false; // Hide loader after fetching
+          isLoading = false;
         });
       }
     } else {
@@ -86,77 +74,94 @@ class _MyMaterialsScreenState extends ConsumerState<MyMaterialsScreen> {
       }
     }
   }
+
+  void _filterMaterials() {
+    setState(() => isLoading = true);
+    final query = searchQueryController.text.toLowerCase();
+
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        setState(() {
+          filteredMaterials = materials.where((material) {
+            // Text search filter
+            bool matchesSearch = query.isEmpty ||
+                material.title?.toLowerCase().contains(query) == true ||
+                material.description?.toLowerCase().contains(query) == true;
+
+            // Disciplines filter
+            bool matchesDisciplines = selectedDisciplines.isEmpty ||
+                (material.disciplines != null &&
+                    material.disciplines!.any((discipline) =>
+                        selectedDisciplines.contains(discipline)));
+
+            // Accessibility filter
+            bool matchesAccessibility = selectedAccessibility.isEmpty ||
+                (material.accessibility != null &&
+                    material.accessibility!.any((access) =>
+                        selectedAccessibility.contains(access)));
+
+            return matchesSearch && matchesDisciplines && matchesAccessibility;
+          }).toList();
+          isLoading = false;
+        });
+      }
+    });
+  }
+
+  void _clearAllFilters() {
+    setState(() {
+      selectedDisciplines.clear();
+      selectedAccessibility.clear();
+      searchQueryController.clear();
+    });
+    _filterMaterials();
+  }
+
+  void _showFilterModal() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => MyMaterialsFilterModal(
+        selectedDisciplines: List.from(selectedDisciplines),
+        selectedAccessibility: List.from(selectedAccessibility),
+        onFiltersApplied: (disciplines, accessibility) {
+          setState(() {
+            selectedDisciplines = disciplines;
+            selectedAccessibility = accessibility;
+          });
+          _filterMaterials();
+        },
+        onClearAll: _clearAllFilters,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final hasActiveFilters = selectedDisciplines.isNotEmpty || selectedAccessibility.isNotEmpty;
+
     return MainLayout(
       index: 1,
       title: 'My Materials',
       content: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.only(right: 20, left: 20, bottom: 20),
-            decoration: const BoxDecoration(
-              color: Color(0xffe3d0ce),
-              borderRadius: BorderRadius.only(
-                bottomRight: Radius.circular(30),
-                bottomLeft: Radius.circular(30),
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 10),
-                const Text(
-                  'Hello User!',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                const Text(
-                  'Explore KahibawHub’s curated selection of educational resources to broaden your horizons.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.black,
-                  ),
-                ),
-                const SizedBox(height: 15),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    SizedBox(
-                      width: MediaQuery.of(context).size.width - 100,
-                      child: CustomTextFormField(
-                        hintText: 'Search for Materials',
-                        controller: searchQueryController,
-                        prefixIcon: PhosphorIconsRegular.magnifyingGlass,
-                        borderColor: primaryColor,
-                      ),
-                    ),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border.all(color: primaryColor, width: 1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: IconButton.outlined(
-                        onPressed: () {},
-                        icon: const PhosphorIcon(
-                          PhosphorIconsRegular.sliders,
-                          color: primaryColor,
-                          size: 21,
-                        ),
-                      ),
-                    )
-                  ],
-                ),
-              ],
-            ),
+          // Header section with search and filter
+          UIHelpers.buildHeaderSection(
+            searchController: searchQueryController,
+            hasActiveFilters: hasActiveFilters,
+            onFilterTap: _showFilterModal,
           ),
+
+          // Active filters indicator
+          UIHelpers.buildActiveFiltersRow(
+            selectedDisciplinesCount: selectedDisciplines.length,
+            selectedAccessibilityCount: selectedAccessibility.length,
+            onClearAll: _clearAllFilters,
+          ),
+
+          // Materials list
           Expanded(
             child: Padding(
               padding: const EdgeInsets.only(
@@ -168,22 +173,37 @@ class _MyMaterialsScreenState extends ConsumerState<MyMaterialsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text(
-                    'My Materials',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'My Materials',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Text(
+                        '${filteredMaterials.length} result${filteredMaterials.length != 1 ? 's' : ''}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.black54,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 10),
                   Expanded(
                     child: isLoading
-                        ? const Center(child: CircularProgressIndicator()) // Loading indicator
+                        ? const Center(child: CircularProgressIndicator())
                         : filteredMaterials.isEmpty
                         ? const Center(
                       child: Text(
                         'No materials found',
-                        style: TextStyle(fontSize: 16, color: Colors.black54),
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.black54,
+                        ),
                       ),
                     )
                         : ListView.builder(
@@ -198,11 +218,11 @@ class _MyMaterialsScreenState extends ConsumerState<MyMaterialsScreen> {
                         );
                       },
                     ),
-                  )
+                  ),
                 ],
               ),
             ),
-          )
+          ),
         ],
       ),
     );

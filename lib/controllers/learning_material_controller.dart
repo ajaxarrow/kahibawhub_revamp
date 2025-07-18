@@ -6,8 +6,6 @@ import '../models/learning_material.dart';
 import '../plugins/dio.config.dart';
 
 class LearningMaterialController {
-
-
   Future<List<LearningMaterial>> fetchAll({int? limit}) async {
     try {
       final res = await dio.get('/apiBrowsing/getAllMaterials?type=browse');
@@ -22,7 +20,6 @@ class LearningMaterialController {
       if (limit != null && limit > 0 && limit < materials.length) {
         return materials.sublist(0, limit);
       }
-
       return materials;
     } catch (e) {
       print("Error fetching all materials: $e");
@@ -52,6 +49,33 @@ class LearningMaterialController {
     }
   }
 
+  Future<LearningMaterial> fetchLearningMaterialByID({required String userID, required String materialID}) async {
+    try {
+      print(userID);
+      final response = await dio.get(
+        '/apiUpdatematerial/retrieveMaterialToUpdate/$userID/$materialID',
+      );
+      final data = response.data;
+      return LearningMaterial.fromMap(data['material']);
+    } catch (e) {
+      print('Fetching of Learning Material failed: $e');
+      rethrow;
+    }
+  }
+
+  Future<LearningMaterial> fetchLearningMaterialByIDWithMaterialFile({required String userID, required String materialID, required String fileHash}) async {
+    try {
+      final response = await dio.get(
+        '/apiOpenMaterial/getMaterialDetails/$materialID/$userID?fileHash=$fileHash',
+      );
+      final data = response.data;
+      return LearningMaterial.fromMap(data['materialData']);
+    } catch (e) {
+      print('Fetching of Learning Material failed: $e');
+      rethrow;
+    }
+  }
+
   Future<Map<String, dynamic>> addMaterial({
     required String userId,
     required File materialFile,
@@ -62,7 +86,7 @@ class LearningMaterialController {
     required List<String> disciplines,
     required List<String> targetAudience,
     required List<String> accessibility,
-    required String primaryInstitution,
+    required String technicalType
   }) async {
     try {
       // Create FormData for multipart upload
@@ -75,9 +99,10 @@ class LearningMaterialController {
         'materialDescription': materialDescription,
         'materialType': materialType,
         'disciplines': disciplines,
-        'primaryInstitution': primaryInstitution,
+        // 'primaryInstitution': primaryInstitution,
         'targetAudience': targetAudience,
         'materialAccessibility': accessibility,
+        'technicalType': technicalType,
       });
 
       // Add image if provided
@@ -119,9 +144,10 @@ class LearningMaterialController {
     required String materialDescription,
     required String materialType,
     required List<String> disciplines,
-    required String primaryInstitution,
+    // required String primaryInstitution,
     List<String>? targetAudience,
     List<String>? accessibility,
+    required String technicalType,
   }) async {
     try {
       // Create FormData for multipart upload
@@ -130,9 +156,10 @@ class LearningMaterialController {
         'materialDescription': materialDescription,
         'materialType': materialType,
         'disciplines': disciplines,
-        'primaryInstitution': primaryInstitution,
+        // 'primaryInstitution': primaryInstitution,
         'targetAudience': targetAudience,
         'materialAccessibility': accessibility,
+        'technicalType': technicalType,
       });
 
       // Add material file if provided
@@ -158,7 +185,7 @@ class LearningMaterialController {
       }
 
       final response = await dio.put(
-        '/apiAddMaterial/updateMaterial/$materialId/$userId',
+        '/apiUpdatematerial/updateMaterial/$userId/$materialId',
         data: formData,
         options: Options(
           contentType: 'multipart/form-data',

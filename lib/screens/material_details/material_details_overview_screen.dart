@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../models/learning_material.dart';
 import '../../themes/styles.dart';
@@ -10,8 +9,11 @@ class MaterialDetailsOverviewScreen extends StatelessWidget {
 
   final LearningMaterial material;
 
+
   @override
   Widget build(BuildContext context) {
+
+
     return SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -83,7 +85,7 @@ class MaterialDetailsOverviewScreen extends StatelessWidget {
                       // Text(
                       //   '${material.primaryAuthor?.firstName ?? 'N/A'} ${material.primaryAuthor?.lastName ?? 'N/A'}',
                       // ),
-                      Text(material.author)
+                      Text(material.author != '' ? material.author : '${material.authorData?.firstName ?? 'N/A'} ${material.authorData?.lastName ?? 'N/A'}')
                     ],
                   ),
                 ),
@@ -117,33 +119,25 @@ class MaterialDetailsOverviewScreen extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                // Expanded(
-                //   child: Column(
-                //     crossAxisAlignment: CrossAxisAlignment.start,
-                //     children: [
-                //       Text('Primary Audience', style: detailsLabelStyle),
-                //       Text(
-                //         material.targetAudience?.join(', ') ?? 'N/A',
-                //       ),
-                //     ],
-                //   ),
-                // ),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Accessible By', style: detailsLabelStyle),
-                      Text(material.accessibility?.join(', ') ?? 'N/A',)],
+                      Text('Target Audience', style: detailsLabelStyle),
+                      Text(
+                        (material.targetAudience != null && material.targetAudience!.isNotEmpty)
+                            ? material.targetAudience!.join(', ')
+                            : 'N/A',
+                      ),
+                    ],
                   ),
                 ),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Technical Format', style: detailsLabelStyle),
-                      Text(material.technicalFormat ?? 'N/A'),
-                      // Text('N/A')
-                    ],
+                      Text('Accessible By', style: detailsLabelStyle),
+                      Text(material.accessibility?.join(', ') ?? 'N/A',)],
                   ),
                 ),
               ],
@@ -156,11 +150,21 @@ class MaterialDetailsOverviewScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Primary Institution', style: detailsLabelStyle),
-                      Text(material.primaryInstitution ?? '0'),
+                      Text('Technical Format', style: detailsLabelStyle),
+                      Text(material.technicalFormat ?? 'N/A'),
+                      // Text('N/A')
                     ],
                   ),
                 ),
+                // Expanded(
+                //   child: Column(
+                //     crossAxisAlignment: CrossAxisAlignment.start,
+                //     children: [
+                //       const Text('Date Created', style: detailsLabelStyle),
+                //       Text(material.dateCreated ?? '0'),
+                //     ],
+                //   ),
+                // ),
                 // Expanded(
                 //   child: Column(
                 //     crossAxisAlignment: CrossAxisAlignment.start,

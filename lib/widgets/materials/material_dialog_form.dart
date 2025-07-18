@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kahibawhub_revamp/models/learning_material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
@@ -9,7 +10,7 @@ import '../../data/material_related_selections_data.dart';
 import '../../providers/auth_provider.dart';
 import '../../screens/success_screen.dart';
 import '../../themes/colors.dart';
-import '../../utils/ui_helpers.dart';
+import '../../utils/ui_builter_utils.dart';
 import '../custom_text_form_field.dart';
 
 enum Mode { create, update }
@@ -18,11 +19,13 @@ class MaterialDialogForm extends ConsumerStatefulWidget {
   const MaterialDialogForm({
     super.key,
     required this.mode,
-    this.materialId
+    this.materialId,
+    this.material
   });
 
   final Mode mode;
   final String? materialId;
+  final LearningMaterial? material;
 
   @override
   ConsumerState<MaterialDialogForm> createState() => _MaterialDialogFormState();
@@ -35,7 +38,7 @@ class _MaterialDialogFormState extends ConsumerState<MaterialDialogForm> {
   // Controllers for form fields
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
-  final TextEditingController _primaryInstitutionController = TextEditingController();
+
 
   // File variables
   File? _materialFile;
@@ -43,6 +46,7 @@ class _MaterialDialogFormState extends ConsumerState<MaterialDialogForm> {
   String? _materialFileName;
   String? _imageFileName;
   String? _technicalFormat;
+  String selectedMaterialType = 'Not Specified';
 
   // Selection variables
   List<String> _selectedTargetAudience = [];
@@ -56,9 +60,32 @@ class _MaterialDialogFormState extends ConsumerState<MaterialDialogForm> {
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
-    _primaryInstitutionController.dispose();
     super.dispose();
   }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMaterialData();
+  }
+
+  Future<void> _loadMaterialData() async {
+    if (widget.mode == Mode.update && widget.material != null) {
+      final material = widget.material!;
+      _titleController.text = material.title ?? '';
+      _descriptionController.text = material.description ?? '';
+      // _materialFile = material.file;
+      // _materialImage = material.image;
+      _materialFileName = material.title ?? '';
+      _imageFileName = material.title ?? '';
+      _technicalFormat = material.technicalFormat;
+      selectedMaterialType = material.type ?? 'Not Specified';
+      _selectedTargetAudience = List<String>.from(material.targetAudience ?? []);
+      _selectedDisciplines = List<String>.from(material.disciplines ?? []);
+      _selectedAccessibility = List<String>.from(material.accessibility ?? []);
+    }
+  }
+
 
 
   String _getFileExtension(String fileName) {
@@ -112,163 +139,6 @@ class _MaterialDialogFormState extends ConsumerState<MaterialDialogForm> {
     }
   }
 
-  Widget _buildMultiSelectDropdown({
-    required String label,
-    required List<String> options,
-    required List<String> selectedValues,
-    required Function(List<String>) onChanged,
-    bool isRequired = false,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label + (isRequired ? ' *' : ''),
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.shade300),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (selectedValues.isEmpty)
-                Text(
-                  'Select $label',
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontSize: 16,
-                  ),
-                )
-              else
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: selectedValues.map((value) {
-                    return Chip(
-                      label: Text(
-                        value,
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                      deleteIcon: const Icon(Icons.close, size: 16),
-                      onDeleted: () {
-                        final newSelected = List<String>.from(selectedValues);
-                        newSelected.remove(value);
-                        onChanged(newSelected);
-                      },
-                      backgroundColor: primaryColor.withOpacity(0.1),
-                      labelStyle: TextStyle(color: primaryColor),
-                    );
-                  }).toList(),
-                ),
-              const SizedBox(height: 8),
-              GestureDetector(
-                onTap: () => _showMultiSelectDialog(
-                  title: 'Select $label',
-                  options: options,
-                  selectedValues: selectedValues,
-                  onChanged: onChanged,
-                ),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Add $label',
-                        style: TextStyle(
-                          color: primaryColor,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      Icon(
-                        Icons.add,
-                        color: primaryColor,
-                        size: 20,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _showMultiSelectDialog({
-    required String title,
-    required List<String> options,
-    required List<String> selectedValues,
-    required Function(List<String>) onChanged,
-  }) async {
-    final List<String> tempSelected = List.from(selectedValues);
-
-    await showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: Text(title),
-              content: SizedBox(
-                width: double.maxFinite,
-                height: 400,
-                child: ListView.builder(
-                  itemCount: options.length,
-                  itemBuilder: (context, index) {
-                    final option = options[index];
-                    final isSelected = tempSelected.contains(option);
-
-                    return CheckboxListTile(
-                      title: Text(option),
-                      value: isSelected,
-                      onChanged: (bool? value) {
-                        setState(() {
-                          if (value == true) {
-                            tempSelected.add(option);
-                          } else {
-                            tempSelected.remove(option);
-                          }
-                        });
-                      },
-                      activeColor: primaryColor,
-                    );
-                  },
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    onChanged(tempSelected);
-                    Navigator.of(context).pop();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                  ),
-                  child: const Text('Done', style: TextStyle(color: Colors.white)),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
   void _submit() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -315,11 +185,11 @@ class _MaterialDialogFormState extends ConsumerState<MaterialDialogForm> {
           materialImage: _materialImage,
           materialTitle: _titleController.text,
           materialDescription: _descriptionController.text,
-          materialType: _technicalFormat!,
+          materialType: selectedMaterialType,
+          technicalType: _technicalFormat!,
           disciplines: _selectedDisciplines,
           targetAudience: _selectedTargetAudience,
           accessibility: _selectedAccessibility,
-          primaryInstitution: _primaryInstitutionController.text,
         );
       } else {
         result = await _controller.updateMaterial(
@@ -329,11 +199,11 @@ class _MaterialDialogFormState extends ConsumerState<MaterialDialogForm> {
           materialImage: _materialImage,
           materialTitle: _titleController.text,
           materialDescription: _descriptionController.text,
-          materialType: _technicalFormat!,
+          materialType: selectedMaterialType,
+          technicalType: _technicalFormat!,
           disciplines: _selectedDisciplines,
           targetAudience: _selectedTargetAudience,
           accessibility: _selectedAccessibility,
-          primaryInstitution: _primaryInstitutionController.text,
         );
       }
 
@@ -553,21 +423,20 @@ class _MaterialDialogFormState extends ConsumerState<MaterialDialogForm> {
                         },
                       ),
                       const SizedBox(height: 20),
-                      CustomTextFormField(
-                        controller: _primaryInstitutionController,
-                        label: 'Primary Institution',
-                        hintText: 'Enter Primary Institution',
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter a primary institution';
-                          }
-                          return null;
+                      buildDropdown(
+                        label: 'Material Type',
+                        value: selectedMaterialType,
+                        items: materialTypeOptions,
+                        onChanged: (value) {
+                          setState(() {
+                            selectedMaterialType = value!;
+                          });
                         },
                       ),
                       const SizedBox(height: 20),
-
                       // Target Audience Multi-Select
-                      _buildMultiSelectDropdown(
+                      buildMultiSelectDropdown(
+                        context: context,
                         label: 'Target Audience',
                         options: targetAudienceOptions,
                         selectedValues: _selectedTargetAudience,
@@ -581,7 +450,8 @@ class _MaterialDialogFormState extends ConsumerState<MaterialDialogForm> {
                       const SizedBox(height: 20),
 
                       // Disciplines Multi-Select
-                      _buildMultiSelectDropdown(
+                      buildMultiSelectDropdown(
+                        context: context,
                         label: 'Disciplines',
                         options: disciplineOptions,
                         selectedValues: _selectedDisciplines,
@@ -595,7 +465,7 @@ class _MaterialDialogFormState extends ConsumerState<MaterialDialogForm> {
                       const SizedBox(height: 20),
 
                       // Accessibility Multi-Select
-                      _buildMultiSelectDropdown(
+                      buildMultiSelectDropdown(
                         label: 'Accessibility Features',
                         options: accessibilityOptions,
                         selectedValues: _selectedAccessibility,
@@ -603,7 +473,7 @@ class _MaterialDialogFormState extends ConsumerState<MaterialDialogForm> {
                           setState(() {
                             _selectedAccessibility = values;
                           });
-                        },
+                        }, context: context,
                       ),
                       const SizedBox(height: 30),
                     ],

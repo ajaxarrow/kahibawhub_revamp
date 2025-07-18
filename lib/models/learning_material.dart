@@ -23,18 +23,22 @@ class LearningMaterial {
     this.author = '',
     this.technicalFormat,
     this.primaryInstitution = '',
+    this.authorData,
+    this.canEdit = false,
+    this.fileHash,
   });
 
   final dynamic id;
-  final dynamic file;
+  dynamic file;
   final String? title;
+  final String? fileHash;
   final String? description;
   final dynamic primaryAuthorID;
   AppUser? primaryAuthor;
   final List<dynamic>? contributors;
   final String? type;
-  final DateTime? dateCreated;
-  final List<String>? targetAudience;
+  final String? dateCreated;
+  List<String>? targetAudience;
   final List<String>? disciplines;
   final dynamic image;
   final List<String>? accessibility;
@@ -44,7 +48,8 @@ class LearningMaterial {
   final String author;
   final String? technicalFormat;
   final String primaryInstitution;
-
+  bool canEdit;
+  AppUser? authorData;
 
   factory LearningMaterial.fromMap(Map<String, dynamic> map) {
     return LearningMaterial(
@@ -52,10 +57,10 @@ class LearningMaterial {
       file: map['materialFile'],
       title: map['materialTitle'],
       description: map['materialDescription'],
-      primaryAuthorID: map['primaryAuthor'],
+      primaryAuthorID: map['primaryAuthor'] is String ? map['primaryAuthor'] as String : '',
       contributors: List<dynamic>.from(map['contributors'] ?? []),
       type: map['materialType'],
-      dateCreated: map['dateUploaded'] ,
+      dateCreated: map['dateUploaded'],
       targetAudience: List<String>.from(map['targetAudience'] ?? []),
       disciplines: List<String>.from(map['disciplines'] ?? []),
       image: map['materialImage'],
@@ -63,11 +68,17 @@ class LearningMaterial {
       authorPermission: map['authorPermission'],
       views: map['totalReads'] ?? 0,
       ratings: (map['averageRatings'] as num?)?.toDouble() ?? 0.0,
-      author: map['primaryAuthor'],
+      author: map['primaryAuthor'] is String ? map['primaryAuthor'] as String : '',
       technicalFormat: map['technicalType'] ?? '',
       primaryInstitution: map['primaryInstitution'] ?? '',
+      fileHash: map['fileHash'] as String? ?? '',
+      authorData: map['primaryAuthor'] is Map
+          ? AppUser.fromMap(map['primaryAuthor'])
+          : null,
     );
   }
+
+
 
   Map<String, dynamic> toMap() {
     return {
@@ -78,7 +89,7 @@ class LearningMaterial {
       'primaryAuthor': primaryAuthor,
       'contributors': contributors ?? [],
       'materialType': type,
-      'dateUploaded': dateCreated?.toIso8601String(),
+      'dateUploaded': dateCreated,
       'targetAudience': targetAudience ?? [],
       'disciplines': disciplines ?? [],
       'materialImage': image,
@@ -100,7 +111,7 @@ class LearningMaterial {
       primaryAuthor: $primaryAuthor,
       contributors: ${contributors?.map((e) => e).toList()},
       type: $type,
-      dateCreated: ${dateCreated?.toIso8601String()},
+      dateCreated: $dateCreated,
       targetAudience: $targetAudience,
       disciplines: $disciplines,
       image: $image,

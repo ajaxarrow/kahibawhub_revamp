@@ -37,3 +37,19 @@ final List<String> accessibilityOptions = [
   'Student'
 ];
 
+final List<String> materialTypeOptions = [
+  'Quiz',
+  'PDF',
+  'Activity',
+  'Video',
+  'Audio',
+  'Text',
+  'Image',
+  'Interactive',
+  'Software',
+  'Dataset',
+  'Presentation',
+  'Report',
+  'Other',
+  'Not Specified'
+];

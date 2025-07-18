@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kahibawhub_revamp/utils/ui_helpers.dart';
+import 'package:kahibawhub_revamp/utils/ui_builter_utils.dart';
 import '../layouts/circle_background.dart';
 import '../models/app_user.dart';
 import '../services/auth_service.dart';
