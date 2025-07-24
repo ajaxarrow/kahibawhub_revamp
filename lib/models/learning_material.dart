@@ -1,5 +1,4 @@
-
-
+import 'package:kahibawhub_revamp/models/contributor.dart';
 import 'app_user.dart';
 
 class LearningMaterial {
@@ -26,6 +25,7 @@ class LearningMaterial {
     this.authorData,
     this.canEdit = false,
     this.fileHash,
+    this.hasPendingUpdates = false,
   });
 
   final dynamic id;
@@ -35,12 +35,12 @@ class LearningMaterial {
   final String? description;
   final dynamic primaryAuthorID;
   AppUser? primaryAuthor;
-  final List<dynamic>? contributors;
+  List<Contributor>? contributors;
   final String? type;
   final String? dateCreated;
   List<String>? targetAudience;
   final List<String>? disciplines;
-  final dynamic image;
+  dynamic image;
   final List<String>? accessibility;
   final bool? authorPermission;
   final int views;
@@ -50,6 +50,7 @@ class LearningMaterial {
   final String primaryInstitution;
   bool canEdit;
   AppUser? authorData;
+  final bool hasPendingUpdates;
 
   factory LearningMaterial.fromMap(Map<String, dynamic> map) {
     return LearningMaterial(
@@ -58,7 +59,9 @@ class LearningMaterial {
       title: map['materialTitle'],
       description: map['materialDescription'],
       primaryAuthorID: map['primaryAuthor'] is String ? map['primaryAuthor'] as String : '',
-      contributors: List<dynamic>.from(map['contributors'] ?? []),
+      contributors: (map['contributors'] as List<dynamic>?)
+          ?.map((e) => Contributor.fromJson(e as Map<String, dynamic>))
+          .toList(),
       type: map['materialType'],
       dateCreated: map['dateUploaded'],
       targetAudience: List<String>.from(map['targetAudience'] ?? []),
@@ -75,10 +78,9 @@ class LearningMaterial {
       authorData: map['primaryAuthor'] is Map
           ? AppUser.fromMap(map['primaryAuthor'])
           : null,
+      hasPendingUpdates: map['hasPendingUpdates'] ?? false,
     );
   }
-
-
 
   Map<String, dynamic> toMap() {
     return {
@@ -97,6 +99,7 @@ class LearningMaterial {
       'authorPermission': authorPermission,
       'totalComments': views,
       'averageRatings': ratings,
+      'hasPendingUpdates': hasPendingUpdates,
     };
   }
 
@@ -118,7 +121,8 @@ class LearningMaterial {
       accessibility: $accessibility,
       authorPermission: $authorPermission,
       views: $views,
-      ratings: $ratings
+      ratings: $ratings,
+      hasPendingUpdates: $hasPendingUpdates
     )''';
   }
 }

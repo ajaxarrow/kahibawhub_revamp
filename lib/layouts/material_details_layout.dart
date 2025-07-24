@@ -16,6 +16,8 @@ import '../themes/colors.dart';
 import '../utils/base64_image_utils.dart';
 import '../widgets/custom_appbar.dart';
 import '../widgets/materials/material_dialog_form.dart';
+import '../widgets/materials/material_update_request_dialog.dart';
+import '../widgets/materials/pending_updates_modal.dart';
 
 class MaterialDetailsLayout extends ConsumerStatefulWidget {
   const MaterialDetailsLayout({super.key, required this.material});
@@ -36,9 +38,8 @@ class _MaterialDetailsLayoutState extends ConsumerState<MaterialDetailsLayout> {
 
   final List<String> _tabTitles = [
     "Overview",
-    // "Authors",
-    // "Comments",
-    // "Reviews",
+    "Comments",
+    "Reviews",
   ];
 
   List<Widget> _tabScreens = [];
@@ -52,6 +53,7 @@ class _MaterialDetailsLayoutState extends ConsumerState<MaterialDetailsLayout> {
   Future<void> _fetchCompleteMaterialData() async {
     try {
       final user = ref.read(userProvider);
+
       if (user?.id == null || widget.material.id == null) {
         setState(() {
           _isLoading = false;
@@ -64,17 +66,36 @@ class _MaterialDetailsLayoutState extends ConsumerState<MaterialDetailsLayout> {
         userID: user!.id!,
         materialID: widget.material.id.toString(),
       );
-      // Check if user can edit (if user ID matches author ID)
+
+      // Preserve original image if needed
+      if (widget.material.image != null) {
+        completeMaterial.image = widget.material.image;
+      }
+
+      // Set edit access
       if (user.id == completeMaterial.authorData?.id) {
         completeMaterial.canEdit = true;
       }
 
+      // 🟡 Fetch only contributors from another call
+      final materialWithContributors =
+      await _controller.fetchLearningMaterialByIDWithMaterialFile(
+        userID: user.id!,
+        materialID: widget.material.id,
+        fileHash: completeMaterial.fileHash!,
+      );
+
+      // ✅ Only update the contributors
+      completeMaterial.contributors = materialWithContributors.contributors;
+
+      // Update UI
       setState(() {
         _completeMaterial = completeMaterial;
         _isLoading = false;
         _tabScreens = [
           MaterialDetailsOverviewScreen(material: completeMaterial),
-          // Add other screens here when available
+          _buildCommentsTab(),
+          _buildReviewsTab(),
         ];
       });
     } catch (e) {
@@ -84,9 +105,43 @@ class _MaterialDetailsLayoutState extends ConsumerState<MaterialDetailsLayout> {
         _completeMaterial = widget.material;
         _tabScreens = [
           MaterialDetailsOverviewScreen(material: widget.material),
+          _buildCommentsTab(),
+          _buildReviewsTab(),
         ];
       });
     }
+  }
+
+  Widget _buildCommentsTab() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          PhosphorIcon(PhosphorIconsRegular.chatCircle, size: 64, color: Colors.grey),
+          SizedBox(height: 16),
+          Text(
+            'Comments feature coming soon',
+            style: TextStyle(fontSize: 16, color: Colors.grey),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReviewsTab() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          PhosphorIcon(PhosphorIconsRegular.star, size: 64, color: Colors.grey),
+          SizedBox(height: 16),
+          Text(
+            'Reviews feature coming soon',
+            style: TextStyle(fontSize: 16, color: Colors.grey),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> downloadFile() async {
@@ -100,7 +155,8 @@ class _MaterialDetailsLayoutState extends ConsumerState<MaterialDetailsLayout> {
       // Fetch material without file hash
       final materialWithFile = await _controller.fetchLearningMaterialByIDWithMaterialFile(
         userID: user!.id!,
-        materialID: widget.material.id, fileHash: _completeMaterial!.fileHash!,
+        materialID: widget.material.id,
+        fileHash: _completeMaterial!.fileHash!,
       );
 
       if (materialWithFile.file != null) {
@@ -235,7 +291,7 @@ class _MaterialDetailsLayoutState extends ConsumerState<MaterialDetailsLayout> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Preview: ${'Document'}',
+                      'Preview: Document',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -325,7 +381,6 @@ class _MaterialDetailsLayoutState extends ConsumerState<MaterialDetailsLayout> {
       },
     );
   }
-
 
   Future<File> _createTempFile(String fileData, String extension) async {
     String base64Data = fileData;
@@ -453,30 +508,117 @@ class _MaterialDetailsLayoutState extends ConsumerState<MaterialDetailsLayout> {
         shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.vertical(top: Radius.circular(20))
         ),
-        builder: (ctx) => MaterialDialogForm(mode: Mode.update, material: _completeMaterial, materialId: widget.material.id)
+        builder: (ctx) => MaterialDialogForm(
+            mode: Mode.update,
+            material: _completeMaterial,
+            materialId: widget.material.id
+        )
     );
   }
 
   void _showActionsMenu() {
+    final user = ref.watch(userProvider);
+    final material = _completeMaterial!;
+
+    final isPrimaryAuthor = material.authorData?.id == user?.id;
+    final isContributor = material.contributors?.any((c) => c.userId == user?.id) ?? false;
+
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
+      builder: (context) => _buildActionsBottomSheet(
+        isPrimaryAuthor: isPrimaryAuthor,
+        isContributor: isContributor,
+        material: material,
+      ),
+    );
+  }
+
+  Widget _buildActionsBottomSheet({
+    required bool isPrimaryAuthor,
+    required bool isContributor,
+    required LearningMaterial material,
+  }) {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (_completeMaterial?.canEdit == true)
+            Text(
+              'Material Actions ${material.primaryAuthorID}',
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            if (isPrimaryAuthor) ...[
               ListTile(
-                leading: const PhosphorIcon(PhosphorIconsRegular.pencil),
-                title: const Text('Edit'),
+                leading: PhosphorIcon(PhosphorIconsRegular.pencil, color: primaryColor),
+                title: const Text('Edit Material'),
+                subtitle: const Text('Make direct changes to the material'),
                 onTap: () {
                   Navigator.pop(context);
                   openMaterialFormDialog();
                 },
               ),
+              const Divider(),
+            ],
+
+            if (isContributor && !isPrimaryAuthor) ...[
+              ListTile(
+                leading: PhosphorIcon(PhosphorIconsRegular.gitPullRequest, color: Colors.blue),
+                title: const Text('Request Update'),
+                subtitle: const Text('Propose changes to the material'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showUpdateRequestDialog();
+                },
+              ),
+              const Divider(),
+            ],
+
+            if (isPrimaryAuthor) ...[
+              ListTile(
+                leading: PhosphorIcon(
+                  PhosphorIconsRegular.clockClockwise,
+                  color: material.hasPendingUpdates ? Colors.orange : Colors.grey,
+                ),
+                title: const Text('Pending Updates'),
+                subtitle: Text(
+                  material.hasPendingUpdates
+                      ? 'Review and manage update requests'
+                      : 'No pending update requests',
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showPendingUpdatesModal();
+                },
+                trailing: material.hasPendingUpdates
+                    ? Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.orange,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Text(
+                    'NEW',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                )
+                    : null,
+              ),
+              const Divider(),
+            ],
+
             ListTile(
               leading: _isPreviewing
                   ? const SizedBox(
@@ -484,13 +626,16 @@ class _MaterialDetailsLayoutState extends ConsumerState<MaterialDetailsLayout> {
                 height: 24,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
-                  : const PhosphorIcon(PhosphorIconsRegular.eye),
+                  : PhosphorIcon(PhosphorIconsRegular.eye, color: Colors.blue),
               title: const Text('Preview'),
+              subtitle: const Text('Preview the material content'),
               onTap: _isPreviewing ? null : () {
                 Navigator.pop(context);
                 previewFile();
               },
             ),
+            const Divider(),
+
             ListTile(
               leading: _isDownloading
                   ? const SizedBox(
@@ -498,16 +643,70 @@ class _MaterialDetailsLayoutState extends ConsumerState<MaterialDetailsLayout> {
                 height: 24,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
-                  : const PhosphorIcon(PhosphorIconsRegular.download),
+                  : PhosphorIcon(PhosphorIconsRegular.download, color: Colors.green),
               title: const Text('Download'),
+              subtitle: const Text('Download the material file'),
               onTap: _isDownloading ? null : () {
                 Navigator.pop(context);
                 downloadFile();
               },
             ),
+            const Divider(),
+
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey.shade200,
+                  foregroundColor: Colors.grey.shade700,
+                  elevation: 0,
+                ),
+                child: const Text('Cancel'),
+              ),
+            ),
           ],
         ),
       ),
+    );
+  }
+
+
+  void _showUpdateRequestDialog() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => MaterialUpdateRequestDialog(
+        id: widget.material.id,
+        material: _completeMaterial!,
+      ),
+    );
+  }
+
+  void _showPendingUpdatesModal() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => PendingUpdatesModal(
+        material: widget.material,
+      ),
+    );
+  }
+
+  void _shareMaterial() {
+    // Implement share functionality
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Share functionality not implemented yet')),
+    );
+  }
+
+  void _reportMaterial() {
+    // Implement report functionality
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Report functionality not implemented yet')),
     );
   }
 
@@ -555,6 +754,9 @@ class _MaterialDetailsLayoutState extends ConsumerState<MaterialDetailsLayout> {
   }
 
   Widget _buildHeader(BuildContext context, LearningMaterial material) {
+    final user = ref.watch(userProvider);
+    final isPrimaryAuthor = material.primaryAuthorID == user?.id;
+
     return Column(
       children: [
         ClipRRect(
@@ -563,12 +765,19 @@ class _MaterialDetailsLayoutState extends ConsumerState<MaterialDetailsLayout> {
             topRight: Radius.circular(15),
           ),
           child: material.image != null
+              ? (material.image!.startsWith('data:image/png;base64')
               ? Image.memory(
-            base64ToBytes(material.image),
+            base64ToBytes(material.image!),
             width: MediaQuery.of(context).size.width,
             height: 170,
             fit: BoxFit.cover,
           )
+              : Image.network(
+            material.image!,
+            width: MediaQuery.of(context).size.width,
+            height: 170,
+            fit: BoxFit.cover,
+          ))
               : Image.asset(
             'lib/assets/images/placeholder.jpg',
             width: MediaQuery.of(context).size.width,
@@ -581,11 +790,36 @@ class _MaterialDetailsLayoutState extends ConsumerState<MaterialDetailsLayout> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                material.title ?? '',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                softWrap: true,
-                overflow: TextOverflow.visible,
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      material.title ?? '',
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      softWrap: true,
+                      overflow: TextOverflow.visible,
+                    ),
+                  ),
+                  // Pending updates indicator (for primary authors)
+                  if (material.hasPendingUpdates && isPrimaryAuthor) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.orange,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text(
+                        'Updates Pending',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
               const SizedBox(height: 12),
               _buildInfoRow(material),

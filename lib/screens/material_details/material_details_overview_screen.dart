@@ -15,7 +15,7 @@ class MaterialDetailsOverviewScreen extends StatelessWidget {
 
 
     return SingleChildScrollView(
-        child: Column(
+      child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
@@ -60,11 +60,66 @@ class MaterialDetailsOverviewScreen extends StatelessWidget {
               ],
             ) : const SizedBox.shrink(),
             Text(
-              material.description ?? '',
+                material.description ?? '',
                 textAlign: TextAlign.justify
 
             ),
             const SizedBox(height: 16),
+
+            // Contributors Section
+            if (material.contributors != null && material.contributors!.isNotEmpty) ...[
+              Text(
+                'Contributors',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: const Color(0xffDDDDDD),
+                    width: 1,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: material.contributors!.map((contributor) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${contributor.firstName} ${contributor.lastName}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w500,
+                              fontSize: 14,
+                            ),
+                          ),
+                          if (contributor.primaryInstitution != null &&
+                              contributor.primaryInstitution!.isNotEmpty)
+                            Text(
+                              contributor.primaryInstitution!,
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 12,
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -188,7 +243,7 @@ class MaterialDetailsOverviewScreen extends StatelessWidget {
               ],
             ),
           ]
-        ),
-      );
+      ),
+    );
   }
 }

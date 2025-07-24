@@ -7,6 +7,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../controllers/learning_material_controller.dart';
 import '../../data/material_related_selections_data.dart';
+import '../../models/contributor.dart';
 import '../../providers/auth_provider.dart';
 import '../../screens/success_screen.dart';
 import '../../themes/colors.dart';
@@ -14,6 +15,8 @@ import '../../utils/ui_builter_utils.dart';
 import '../custom_text_form_field.dart';
 
 enum Mode { create, update }
+
+
 
 class MaterialDialogForm extends ConsumerStatefulWidget {
   const MaterialDialogForm({
@@ -39,7 +42,6 @@ class _MaterialDialogFormState extends ConsumerState<MaterialDialogForm> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
 
-
   // File variables
   File? _materialFile;
   File? _materialImage;
@@ -52,6 +54,7 @@ class _MaterialDialogFormState extends ConsumerState<MaterialDialogForm> {
   List<String> _selectedTargetAudience = [];
   List<String> _selectedDisciplines = [];
   List<String> _selectedAccessibility = [];
+  List<Contributor> _selectedContributors = []; // Add this line
 
   // Loading state
   bool _isLoading = false;
@@ -74,8 +77,6 @@ class _MaterialDialogFormState extends ConsumerState<MaterialDialogForm> {
       final material = widget.material!;
       _titleController.text = material.title ?? '';
       _descriptionController.text = material.description ?? '';
-      // _materialFile = material.file;
-      // _materialImage = material.image;
       _materialFileName = material.title ?? '';
       _imageFileName = material.title ?? '';
       _technicalFormat = material.technicalFormat;
@@ -83,10 +84,9 @@ class _MaterialDialogFormState extends ConsumerState<MaterialDialogForm> {
       _selectedTargetAudience = List<String>.from(material.targetAudience ?? []);
       _selectedDisciplines = List<String>.from(material.disciplines ?? []);
       _selectedAccessibility = List<String>.from(material.accessibility ?? []);
+      _selectedContributors = material.contributors ?? [];
     }
   }
-
-
 
   String _getFileExtension(String fileName) {
     return fileName.split('.').last.toLowerCase();
@@ -137,6 +137,29 @@ class _MaterialDialogFormState extends ConsumerState<MaterialDialogForm> {
       showError(context: context, errorMessage: e.toString(), errorTitle: 'Error Picking Image');
       print('Error picking image: $e');
     }
+  }
+
+  // Add this method for contributor search modal
+  Future<void> _showContributorSearchModal() async {
+    await showDialog(
+      context: context,
+      builder: (context) => _ContributorSearchModal(
+        controller: _controller,
+        onContributorSelected: (contributor) {
+          setState(() {
+            if (!_selectedContributors.any((c) => c.id == contributor.id)) {
+              _selectedContributors.add(contributor);
+            }
+          });
+        },
+      ),
+    );
+  }
+
+  void _removeContributor(String contributorId) {
+    setState(() {
+      _selectedContributors.removeWhere((c) => c.id == contributorId);
+    });
   }
 
   void _submit() async {
@@ -190,6 +213,7 @@ class _MaterialDialogFormState extends ConsumerState<MaterialDialogForm> {
           disciplines: _selectedDisciplines,
           targetAudience: _selectedTargetAudience,
           accessibility: _selectedAccessibility,
+          contributors: _selectedContributors, // Add this line
         );
       } else {
         result = await _controller.updateMaterial(
@@ -204,6 +228,7 @@ class _MaterialDialogFormState extends ConsumerState<MaterialDialogForm> {
           disciplines: _selectedDisciplines,
           targetAudience: _selectedTargetAudience,
           accessibility: _selectedAccessibility,
+          contributors: _selectedContributors, // Add this line
         );
       }
 
@@ -434,6 +459,96 @@ class _MaterialDialogFormState extends ConsumerState<MaterialDialogForm> {
                         },
                       ),
                       const SizedBox(height: 20),
+
+                      // Contributors Section - Add this
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Contributors',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                TextButton.icon(
+                                  onPressed: _isLoading ? null : _showContributorSearchModal,
+                                  icon: Icon(PhosphorIconsRegular.plus, size: 16),
+                                  label: const Text('Add'),
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            if (_selectedContributors.isEmpty)
+                              Text(
+                                'No contributors added',
+                                style: TextStyle(
+                                  color: Colors.grey.shade600,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              )
+                            else
+                              Column(
+                                children: _selectedContributors.map((contributor) {
+                                  return Container(
+                                    margin: const EdgeInsets.only(bottom: 8),
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade100,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(PhosphorIconsRegular.user, size: 20),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                '${contributor.firstName} ${contributor.lastName}',
+                                                style: const TextStyle(fontWeight: FontWeight.w500),
+                                              ),
+                                              if (contributor.primaryInstitution != null)
+                                                Text(
+                                                  contributor.primaryInstitution!,
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: Colors.grey.shade600,
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                        ),
+                                        IconButton(
+                                          onPressed: () => _removeContributor(contributor.id),
+                                          icon: Icon(PhosphorIconsRegular.x, size: 16),
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
                       // Target Audience Multi-Select
                       buildMultiSelectDropdown(
                         context: context,
@@ -473,7 +588,8 @@ class _MaterialDialogFormState extends ConsumerState<MaterialDialogForm> {
                           setState(() {
                             _selectedAccessibility = values;
                           });
-                        }, context: context,
+                        },
+                        context: context,
                       ),
                       const SizedBox(height: 30),
                     ],
@@ -517,6 +633,144 @@ class _MaterialDialogFormState extends ConsumerState<MaterialDialogForm> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// Add this new widget for contributor search modal
+class _ContributorSearchModal extends StatefulWidget {
+  final LearningMaterialController controller;
+  final Function(Contributor) onContributorSelected;
+
+  const _ContributorSearchModal({
+    required this.controller,
+    required this.onContributorSelected,
+  });
+
+  @override
+  State<_ContributorSearchModal> createState() => _ContributorSearchModalState();
+}
+
+class _ContributorSearchModalState extends State<_ContributorSearchModal> {
+  final TextEditingController _searchController = TextEditingController();
+  List<Contributor> _searchResults = [];
+  bool _isSearching = false;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+
+  Future<void> _searchContributors(String query) async {
+    if (query.trim().isEmpty) {
+      setState(() {
+        _searchResults = [];
+        _isSearching = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _isSearching = true;
+    });
+
+    try {
+      final results = await widget.controller.searchContributors(query);
+      setState(() {
+        _searchResults = results;
+        _isSearching = false;
+      });
+    } catch (e) {
+      setState(() {
+        _searchResults = [];
+        _isSearching = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar (
+        SnackBar(content: Text('Error searching contributors: $e')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.9,
+        height: MediaQuery.of(context).size.height * 0.6,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Search Contributors',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: Icon(PhosphorIconsRegular.x),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search by name...',
+                prefixIcon: Icon(PhosphorIconsRegular.magnifyingGlass),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              onChanged: (value) {
+                // Debounce search
+                Future.delayed(const Duration(milliseconds: 500), () {
+                  if (_searchController.text == value) {
+                    _searchContributors(value);
+                  }
+                });
+              },
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: _isSearching
+                  ? const Center(child: CircularProgressIndicator())
+                  : _searchResults.isEmpty
+                  ? Center(
+                child: Text(
+                  _searchController.text.isEmpty
+                      ? 'Start typing to search contributors'
+                      : 'No contributors found',
+                  style: TextStyle(color: Colors.grey.shade600),
+                ),
+              )
+                  : ListView.builder(
+                itemCount: _searchResults.length,
+                itemBuilder: (context, index) {
+                  final contributor = _searchResults[index];
+                  return ListTile(
+                    leading: Icon(PhosphorIconsRegular.user),
+                    title: Text('${contributor.firstName} ${contributor.lastName}'),
+                    subtitle: contributor.primaryInstitution != null
+                        ? Text(contributor.primaryInstitution!)
+                        : null,
+                    onTap: () {
+                      widget.onContributorSelected(contributor);
+                      Navigator.pop(context);
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );

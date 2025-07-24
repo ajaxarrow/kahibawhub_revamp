@@ -49,17 +49,26 @@ class MaterialItem extends StatelessWidget {
                     topLeft: Radius.circular(15),
                     topRight: Radius.circular(15),
                   ),
-                  child: material.image != null ? Image.memory(
-                    base64ToBytes(material.image),
+                    child: material.image != null
+                        ? (material.image!.startsWith('data:image')
+                        ? Image.memory(
+                      base64ToBytes(material.image!),
                       width: MediaQuery.of(context).size.width - 80,
                       height: 130,
                       fit: BoxFit.cover,
-                    ) : Image.asset(
-                    'lib/assets/images/placeholder.jpg',
-                    width: MediaQuery.of(context).size.width - 80,
-                    height: 130,
-                    fit: BoxFit.cover,
-                  ),
+                    )
+                        : Image.network(
+                      material.image!,
+                      width: MediaQuery.of(context).size.width - 80,
+                      height: 130,
+                      fit: BoxFit.cover,
+                    ))
+                        : Image.asset(
+                      'lib/assets/images/placeholder.jpg',
+                      width: MediaQuery.of(context).size.width - 80,
+                      height: 130,
+                      fit: BoxFit.cover,
+                    ),
                 ),
                 Padding(
                   padding: const EdgeInsets.all(10),
@@ -202,12 +211,21 @@ class MaterialItem extends StatelessWidget {
                     topLeft: Radius.circular(15),
                     bottomLeft: Radius.circular(15),
                   ),
-                  child: material.image != null ? Image.memory(
-                    base64ToBytes(material.image),
+                  child: material.image != null
+                      ? (material.image!.startsWith('data:image')
+                      ? Image.memory(
+                    base64ToBytes(material.image!),
                     width: 80,
                     height: 100,
                     fit: BoxFit.cover,
-                  ): Image.asset(
+                  )
+                      : Image.network(
+                    material.image!,
+                    width: 80,
+                    height: 100,
+                    fit: BoxFit.cover,
+                  ))
+                      : Image.asset(
                     'lib/assets/images/placeholder.jpg',
                     width: 80,
                     height: 100,
