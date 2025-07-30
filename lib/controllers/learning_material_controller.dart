@@ -210,8 +210,15 @@ class LearningMaterialController {
         'material': response.data['material'],
       };
     } catch (e) {
-      print("Error updating material: $e");
-      throw Exception('Failed to update material: ${e.toString()}');
+      if (e is DioException) {
+        // Print full response for debugging
+        print("DioException occurred:");
+        print("Data: ${e.response?.data}");
+        throw Exception('Failed to update material: ${e.response?.data ?? e.message}');
+      } else {
+        print("Unexpected error: $e");
+        throw Exception('Failed to update material: ${e.toString()}');
+      }
     }
   }
 
