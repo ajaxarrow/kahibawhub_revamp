@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kahibawhub_revamp/controllers/app_user_controller.dart';
 import 'package:kahibawhub_revamp/models/learning_material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:file_picker/file_picker.dart';
@@ -8,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../controllers/learning_material_controller.dart';
 import '../../data/material_related_selections_data.dart';
 import '../../models/contributor.dart';
+import '../../models/user_profile.dart';
 import '../../providers/auth_provider.dart';
 import '../../screens/success_screen.dart';
 import '../../themes/colors.dart';
@@ -15,8 +17,6 @@ import '../../utils/ui_builter_utils.dart';
 import '../custom_text_form_field.dart';
 
 enum Mode { create, update }
-
-
 
 class MaterialDialogForm extends ConsumerStatefulWidget {
   const MaterialDialogForm({
@@ -54,7 +54,8 @@ class _MaterialDialogFormState extends ConsumerState<MaterialDialogForm> {
   List<String> _selectedTargetAudience = [];
   List<String> _selectedDisciplines = [];
   List<String> _selectedAccessibility = [];
-  List<Contributor> _selectedContributors = []; // Add this line
+  List<String> _selectedContributorIds = []; // Changed to list of IDs
+  Map<String, UserProfile> _contributorProfiles = {}; // Cache for profiles
 
   // Loading state
   bool _isLoading = false;
@@ -84,7 +85,39 @@ class _MaterialDialogFormState extends ConsumerState<MaterialDialogForm> {
       _selectedTargetAudience = List<String>.from(material.targetAudience ?? []);
       _selectedDisciplines = List<String>.from(material.disciplines ?? []);
       _selectedAccessibility = List<String>.from(material.accessibility ?? []);
-      _selectedContributors = material.contributors ?? [];
+
+      // Handle contributors based on their type
+      if (material.contributors != null) {
+        // Check if contributors are already Contributor objects or just IDs
+        if (material.contributors!.isNotEmpty) {
+          if (material.contributors!.first is String) {
+            // Contributors are IDs
+            _selectedContributorIds = List<String>.from(material.contributors!);
+          } else {
+            // Contributors are Contributor objects, extract IDs
+            _selectedContributorIds = material.contributors!
+                .map((contributor) => contributor.id)
+                .toList();
+          }
+          // Load contributor profiles
+          await _loadContributorProfiles();
+        }
+      }
+    }
+  }
+
+  Future<void> _loadContributorProfiles() async {
+    for (String contributorId in _selectedContributorIds) {
+      if (!_contributorProfiles.containsKey(contributorId)) {
+        try {
+          final profile = await AppUserController().getUserProfile(userID: contributorId);
+          setState(() {
+            _contributorProfiles[contributorId] = profile;
+          });
+        } catch (e) {
+          print('Error loading contributor profile for $contributorId: $e');
+        }
+      }
     }
   }
 
@@ -139,18 +172,27 @@ class _MaterialDialogFormState extends ConsumerState<MaterialDialogForm> {
     }
   }
 
-  // Add this method for contributor search modal
   Future<void> _showContributorSearchModal() async {
     await showDialog(
       context: context,
       builder: (context) => _ContributorSearchModal(
         controller: _controller,
-        onContributorSelected: (contributor) {
-          setState(() {
-            if (!_selectedContributors.any((c) => c.id == contributor.id)) {
-              _selectedContributors.add(contributor);
+        onContributorSelected: (contributor) async {
+          if (!_selectedContributorIds.contains(contributor.userId)) {
+            setState(() {
+              _selectedContributorIds.add(contributor.userId);
+            });
+
+            // Load the contributor's profile
+            try {
+              final profile = await AppUserController().getUserProfile(userID: contributor.userId);
+              setState(() {
+                _contributorProfiles[contributor.userId] = profile;
+              });
+            } catch (e) {
+              print('Error loading contributor profile: $e');
             }
-          });
+          }
         },
       ),
     );
@@ -158,7 +200,8 @@ class _MaterialDialogFormState extends ConsumerState<MaterialDialogForm> {
 
   void _removeContributor(String contributorId) {
     setState(() {
-      _selectedContributors.removeWhere((c) => c.id == contributorId);
+      _selectedContributorIds.removeWhere((id) => id == contributorId);
+      _contributorProfiles.remove(contributorId);
     });
   }
 
@@ -198,7 +241,6 @@ class _MaterialDialogFormState extends ConsumerState<MaterialDialogForm> {
 
     try {
       Map<String, dynamic> result;
-
       final user = ref.watch(userProvider);
 
       if (widget.mode == Mode.create) {
@@ -213,7 +255,7 @@ class _MaterialDialogFormState extends ConsumerState<MaterialDialogForm> {
           disciplines: _selectedDisciplines,
           targetAudience: _selectedTargetAudience,
           accessibility: _selectedAccessibility,
-          contributors: _selectedContributors, // Add this line
+          contributorIds: _selectedContributorIds, // Pass IDs instead of objects
         );
       } else {
         result = await _controller.updateMaterial(
@@ -228,7 +270,7 @@ class _MaterialDialogFormState extends ConsumerState<MaterialDialogForm> {
           disciplines: _selectedDisciplines,
           targetAudience: _selectedTargetAudience,
           accessibility: _selectedAccessibility,
-          contributors: _selectedContributors, // Add this line
+          contributorIds: _selectedContributorIds, // Pass IDs instead of objects
         );
       }
 
@@ -460,7 +502,7 @@ class _MaterialDialogFormState extends ConsumerState<MaterialDialogForm> {
                       ),
                       const SizedBox(height: 20),
 
-                      // Contributors Section - Add this
+                      // Contributors Section - Updated to show profiles
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(16),
@@ -492,7 +534,7 @@ class _MaterialDialogFormState extends ConsumerState<MaterialDialogForm> {
                               ],
                             ),
                             const SizedBox(height: 8),
-                            if (_selectedContributors.isEmpty)
+                            if (_selectedContributorIds.isEmpty)
                               Text(
                                 'No contributors added',
                                 style: TextStyle(
@@ -502,7 +544,8 @@ class _MaterialDialogFormState extends ConsumerState<MaterialDialogForm> {
                               )
                             else
                               Column(
-                                children: _selectedContributors.map((contributor) {
+                                children: _selectedContributorIds.map((contributorId) {
+                                  final profile = _contributorProfiles[contributorId];
                                   return Container(
                                     margin: const EdgeInsets.only(bottom: 8),
                                     padding: const EdgeInsets.all(12),
@@ -519,12 +562,14 @@ class _MaterialDialogFormState extends ConsumerState<MaterialDialogForm> {
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
                                               Text(
-                                                '${contributor.firstName} ${contributor.lastName}',
+                                                profile != null
+                                                    ? '${profile.firstName ?? ''} ${profile.lastName ?? ''}'.trim()
+                                                    : 'Loading...',
                                                 style: const TextStyle(fontWeight: FontWeight.w500),
                                               ),
-                                              if (contributor.primaryInstitution != null)
+                                              if (profile?.primaryInstitution != null && profile!.primaryInstitution!.isNotEmpty)
                                                 Text(
-                                                  contributor.primaryInstitution!,
+                                                  profile.primaryInstitution!,
                                                   style: TextStyle(
                                                     fontSize: 12,
                                                     color: Colors.grey.shade600,
@@ -534,7 +579,7 @@ class _MaterialDialogFormState extends ConsumerState<MaterialDialogForm> {
                                           ),
                                         ),
                                         IconButton(
-                                          onPressed: () => _removeContributor(contributor.id),
+                                          onPressed: () => _removeContributor(contributorId),
                                           icon: Icon(PhosphorIconsRegular.x, size: 16),
                                           padding: EdgeInsets.zero,
                                           constraints: const BoxConstraints(),
@@ -639,7 +684,7 @@ class _MaterialDialogFormState extends ConsumerState<MaterialDialogForm> {
   }
 }
 
-// Add this new widget for contributor search modal
+// Updated contributor search modal
 class _ContributorSearchModal extends StatefulWidget {
   final LearningMaterialController controller;
   final Function(Contributor) onContributorSelected;
@@ -663,7 +708,6 @@ class _ContributorSearchModalState extends State<_ContributorSearchModal> {
     _searchController.dispose();
     super.dispose();
   }
-
 
   Future<void> _searchContributors(String query) async {
     if (query.trim().isEmpty) {
@@ -689,7 +733,7 @@ class _ContributorSearchModalState extends State<_ContributorSearchModal> {
         _searchResults = [];
         _isSearching = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar (
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error searching contributors: $e')),
       );
     }

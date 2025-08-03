@@ -79,6 +79,7 @@ class LearningMaterialController {
     }
   }
 
+  // Updated addMaterial method
   Future<Map<String, dynamic>> addMaterial({
     required String userId,
     required File materialFile,
@@ -90,7 +91,7 @@ class LearningMaterialController {
     required List<String> targetAudience,
     required List<String> accessibility,
     required String technicalType,
-    required List<Contributor> contributors,
+    required List<String> contributorIds, // Changed from List<Contributor> to List<String>
   }) async {
     try {
       // Create FormData for multipart upload
@@ -106,7 +107,7 @@ class LearningMaterialController {
         'targetAudience': targetAudience,
         'materialAccessibility': accessibility,
         'technicalType': technicalType,
-        'contributors': contributors.map((c) => c.toJson()).toList(),
+        'contributors': contributorIds, // Send as list of IDs
         'authorPermission': true
       });
 
@@ -145,9 +146,9 @@ class LearningMaterialController {
         throw Exception('Failed to add material: ${e.toString()}');
       }
     }
-
   }
 
+// Updated updateMaterial method
   Future<Map<String, dynamic>> updateMaterial({
     required String materialId,
     required String userId,
@@ -157,14 +158,14 @@ class LearningMaterialController {
     required String materialDescription,
     required String materialType,
     required List<String> disciplines,
-    List<String>? targetAudience,
-    List<String>? accessibility,
+    required List<String> targetAudience,
+    required List<String> accessibility,
     required String technicalType,
-    required List<Contributor> contributors,
+    required List<String> contributorIds, // Changed from List<Contributor> to List<String>
   }) async {
     try {
       // Create FormData for multipart upload
-      FormData formData = FormData.fromMap({
+      Map<String, dynamic> formDataMap = {
         'materialTitle': materialTitle,
         'materialDescription': materialDescription,
         'materialType': materialType,
@@ -172,8 +173,11 @@ class LearningMaterialController {
         'targetAudience': targetAudience,
         'materialAccessibility': accessibility,
         'technicalType': technicalType,
-        'contributors': contributors.map((c) => c.toJson()).toList(),
-      });
+        'contributors': contributorIds, // Send as list of IDs
+        'authorPermission': true
+      };
+
+      FormData formData = FormData.fromMap(formDataMap);
 
       // Add material file if provided
       if (materialFile != null) {
@@ -198,7 +202,7 @@ class LearningMaterialController {
       }
 
       final response = await dio.put(
-        '/apiUpdatematerial/updateMaterial/$userId/$materialId',
+        '/apiUpdateMaterial/updateMaterial/$materialId/$userId',
         data: formData,
         options: Options(
           contentType: 'multipart/form-data',
@@ -211,7 +215,6 @@ class LearningMaterialController {
       };
     } catch (e) {
       if (e is DioException) {
-        // Print full response for debugging
         print("DioException occurred:");
         print("Data: ${e.response?.data}");
         throw Exception('Failed to update material: ${e.response?.data ?? e.message}');
@@ -247,6 +250,33 @@ class LearningMaterialController {
     } catch (e) {
       print("Error searching contributors: $e");
       throw Exception('Failed to search contributors: ${e.toString()}');
+    }
+  }
+
+  // Add this method to your LearningMaterialController class
+  Future<List<Map<String, dynamic>>> getMyCollaborationRequests({
+    required String userId,
+    String? materialId,
+  }) async {
+    try {
+      final response = await dio.get(
+        '/apiCollaborations/getMyCollaborationRequestToOtherAuthors/$userId',
+      );
+
+      List<Map<String, dynamic>> requests = List<Map<String, dynamic>>.from(response.data['data']);
+
+      // Filter by materialId if provided
+      if (materialId != null) {
+        requests = requests.where((request) => request['materialId'] == materialId).toList();
+      }
+
+      return requests;
+    } catch (e) {
+      if (e is DioException) {
+        throw Exception('Failed to fetch collaboration requests: ${e.response?.data ?? e.message}');
+      } else {
+        throw Exception('Failed to fetch collaboration requests: ${e.toString()}');
+      }
     }
   }
 

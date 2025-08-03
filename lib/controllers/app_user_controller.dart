@@ -12,8 +12,15 @@ class AppUserController{
       final data = response.data;
       return UserProfile.fromMap(data);
     } catch (e) {
-      print('Fetching of User Profile failed: $e');
-      rethrow;
+      if (e is DioException) {
+        // Print full response for debugging
+        print("DioException occurred:");
+        print("Data: ${e.response?.data}");
+        throw Exception('Fetching of User Profile failed: ${e.response?.data ?? e.message}');
+      } else {
+        print("Unexpected error: $e");
+        throw Exception('Fetching of User Profile failed: ${e.toString()}');
+      }
     }
   }
 

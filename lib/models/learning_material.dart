@@ -10,6 +10,7 @@ class LearningMaterial {
     this.primaryAuthorID,
     this.primaryAuthor,
     this.contributors,
+    this.contributorIds, // Add this field for storing just IDs
     this.type,
     this.dateCreated,
     this.targetAudience,
@@ -36,6 +37,7 @@ class LearningMaterial {
   final dynamic primaryAuthorID;
   AppUser? primaryAuthor;
   List<Contributor>? contributors;
+  List<String>? contributorIds; // Add this field
   final String? type;
   final String? dateCreated;
   List<String>? targetAudience;
@@ -53,15 +55,34 @@ class LearningMaterial {
   final bool hasPendingUpdates;
 
   factory LearningMaterial.fromMap(Map<String, dynamic> map) {
+    // Handle contributors conditionally
+    List<Contributor>? contributorObjects;
+    List<String>? contributorIdsList;
+
+    if (map['contributors'] != null) {
+      final contributorsData = map['contributors'] as List<dynamic>;
+      if (contributorsData.isNotEmpty) {
+        // Check if the first item is a string (ID) or object
+        if (contributorsData.first is String) {
+          // Contributors are stored as IDs
+          contributorIdsList = contributorsData.cast<String>();
+        } else {
+          // Contributors are stored as objects
+          contributorObjects = contributorsData
+              .map((e) => Contributor.fromJson(e as Map<String, dynamic>))
+              .toList();
+        }
+      }
+    }
+
     return LearningMaterial(
       id: map['_id'],
       file: map['materialFile'],
       title: map['materialTitle'],
       description: map['materialDescription'],
       primaryAuthorID: map['primaryAuthor'] is String ? map['primaryAuthor'] as String : '',
-      contributors: (map['contributors'] as List<dynamic>?)
-          ?.map((e) => Contributor.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      contributors: contributorObjects,
+      contributorIds: contributorIdsList,
       type: map['materialType'],
       dateCreated: map['dateUploaded'],
       targetAudience: List<String>.from(map['targetAudience'] ?? []),
@@ -89,7 +110,7 @@ class LearningMaterial {
       'materialTitle': title,
       'materialDescription': description,
       'primaryAuthor': primaryAuthor,
-      'contributors': contributors ?? [],
+      'contributors': contributorIds ?? contributors?.map((c) => c.toJson()).toList() ?? [],
       'materialType': type,
       'dateUploaded': dateCreated,
       'targetAudience': targetAudience ?? [],
@@ -103,6 +124,17 @@ class LearningMaterial {
     };
   }
 
+  // Helper method to get contributor IDs regardless of how they're stored
+  List<String> getContributorIds() {
+    if (contributorIds != null && contributorIds!.isNotEmpty) {
+      return contributorIds!;
+    }
+    if (contributors != null && contributors!.isNotEmpty) {
+      return contributors!.map((c) => c.id).toList();
+    }
+    return [];
+  }
+
   @override
   String toString() {
     return '''
@@ -113,6 +145,7 @@ class LearningMaterial {
       filePath: $file,
       primaryAuthor: $primaryAuthor,
       contributors: ${contributors?.map((e) => e).toList()},
+      contributorIds: $contributorIds,
       type: $type,
       dateCreated: $dateCreated,
       targetAudience: $targetAudience,

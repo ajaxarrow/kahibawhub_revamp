@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kahibawhub_revamp/controllers/app_user_controller.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
@@ -10,6 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
 import '../models/learning_material.dart';
 import '../controllers/learning_material_controller.dart';
+import '../models/user_profile.dart';
 import '../providers/auth_provider.dart';
 import '../screens/material_details/material_details_overview_screen.dart';
 import '../themes/colors.dart';
@@ -142,6 +144,266 @@ class _MaterialDetailsLayoutState extends ConsumerState<MaterialDetailsLayout> {
         ],
       ),
     );
+  }
+
+  void _showCollaborationRequestsModal() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        maxChildSize: 0.9,
+        minChildSize: 0.5,
+        expand: false,
+        builder: (context, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              // Handle bar
+              Container(
+                margin: const EdgeInsets.only(top: 8),
+                height: 4,
+                width: 40,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              // Header
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Collaboration Requests',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const PhosphorIcon(PhosphorIconsRegular.x),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              // Content
+              Expanded(
+                child: FutureBuilder<List<Map<String, dynamic>>>(
+                  future: _controller.getMyCollaborationRequests(
+                    userId: ref.read(userProvider)!.id!,
+                    materialId: widget.material.id,
+                  ),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircularProgressIndicator(),
+                            SizedBox(height: 16),
+                            Text('Loading collaboration requests...'),
+                          ],
+                        ),
+                      );
+                    }
+
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const PhosphorIcon(PhosphorIconsRegular.warning, size: 64, color: Colors.red),
+                            const SizedBox(height: 16),
+                            Text('Error: ${snapshot.error}'),
+                          ],
+                        ),
+                      );
+                    }
+
+                    final requests = snapshot.data ?? [];
+
+                    if (requests.isEmpty) {
+                      return const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            PhosphorIcon(PhosphorIconsRegular.users, size: 64, color: Colors.grey),
+                            SizedBox(height: 16),
+                            Text(
+                              'No collaboration requests sent',
+                              style: TextStyle(fontSize: 16, color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    return ListView.separated(
+                      controller: scrollController,
+                      padding: const EdgeInsets.all(16),
+                      itemCount: requests.length,
+                      separatorBuilder: (context, index) => const Divider(),
+                      itemBuilder: (context, index) {
+                        final request = requests[index];
+                        return _buildCollaborationRequestItem(request);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCollaborationRequestItem(Map<String, dynamic> request) {
+    final requestedTo = List<Map<String, dynamic>>.from(request['requestedTo']);
+
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              request['materialTitle'] ?? 'Unknown Material',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Request ID: ${request['collabRequestId']}',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Requested Authors:',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ...requestedTo.map((author) => _buildAuthorRequestItem(author)).toList(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAuthorRequestItem(Map<String, dynamic> author) {
+    final authorId = author['authorId'];
+    final status = author['authorAction'] ?? 'pending';
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: FutureBuilder<UserProfile>(
+              future: AppUserController().getUserProfile(userID: authorId),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Row(
+                    children: [
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      SizedBox(width: 8),
+                      Text('Loading author...'),
+                    ],
+                  );
+                }
+
+                if (snapshot.hasError) {
+                  return Text('Error loading author: $authorId');
+                }
+
+                final userProfile = snapshot.data;
+                return Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 16,
+                      backgroundColor: Colors.grey[300],
+                      child: Text(
+                        (userProfile?.firstName?.isNotEmpty == true || userProfile?.lastName?.isNotEmpty == true)
+                            ? '${userProfile?.firstName?[0] ?? ''}${userProfile?.lastName?[0] ?? ''}'.toUpperCase()
+                            : '?',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        [
+                          userProfile?.firstName,
+                          userProfile?.lastName
+                        ].where((s) => s?.isNotEmpty == true).join(' ') // combine non-empty names
+                            .trim()
+                            .isNotEmpty
+                            ? '${userProfile?.firstName ?? ''} ${userProfile?.lastName ?? ''}'.trim()
+                            : 'Unknown Author',
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: _getStatusColor(status),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              status.toUpperCase(),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'accepted':
+        return Colors.green;
+      case 'rejected':
+        return Colors.red;
+      case 'pending':
+      default:
+        return Colors.orange;
+    }
   }
 
   Future<void> downloadFile() async {
@@ -521,7 +783,7 @@ class _MaterialDetailsLayoutState extends ConsumerState<MaterialDetailsLayout> {
     final material = _completeMaterial!;
 
     final isPrimaryAuthor = material.authorData?.id == user?.id;
-    final isContributor = material.contributors?.any((c) => c.userId == user?.id) ?? false;
+    final isContributor = material.contributorIds?.contains(user?.id) ?? false;
 
     showModalBottomSheet(
       context: context,
@@ -618,6 +880,19 @@ class _MaterialDetailsLayoutState extends ConsumerState<MaterialDetailsLayout> {
               ),
               const Divider(),
             ],
+            if (isPrimaryAuthor) ...[
+              ListTile(
+                leading: PhosphorIcon(PhosphorIconsRegular.users, color: Colors.purple),
+                title: const Text('Collaboration Requests'),
+                subtitle: const Text('View sent collaboration requests'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showCollaborationRequestsModal();
+                },
+              ),
+              const Divider(),
+            ],
+
 
             ListTile(
               leading: _isPreviewing
