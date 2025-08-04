@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'screens/collaboration/collaborations_screen.dart';
 import 'screens/dashboard/dashboard_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/auth_screen.dart';
@@ -32,7 +33,7 @@ class App extends ConsumerWidget {
         // '/engagements/materials': (context) => const MaterialsEngagementScreen(),
         // '/engagements/users': (context) => const UsersEngagementScreen(),
         '/my-materials': (context) => const MyMaterialsScreen(),
-        // '/collaborations': (context) => const CollaborationsScreen(),
+        '/collaborations': (context) => const CollaborationsScreen(),
         // '/profile': (context) => ProfileScreen(author: AppUser(firstName: 'John', lastName: 'Doe')),
         '/all-materials': (context) => const AllMaterialsScreen(),
       },

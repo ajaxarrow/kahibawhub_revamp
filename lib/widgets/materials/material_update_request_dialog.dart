@@ -173,7 +173,7 @@ class _MaterialUpdateRequestDialogState extends ConsumerState<MaterialUpdateRequ
         updatedTechnicalType: _technicalFormat ?? widget.material.technicalFormat ?? '',
         updatedDisciplines: _selectedDisciplines,
         updatedTargetAudience: _selectedTargetAudience,
-        updatedContributors: _selectedContributors,
+        // updatedContributors: _selectedContributors,
       );
 
       if (result['success']) {
@@ -439,79 +439,79 @@ class _MaterialUpdateRequestDialogState extends ConsumerState<MaterialUpdateRequ
                       const SizedBox(height: 20),
 
                       // Contributors Section
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text(
-                                  'Contributors',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
-                                  ),
-                                )
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            if (_selectedContributors.isEmpty)
-                              Text(
-                                'No contributors added',
-                                style: TextStyle(
-                                  color: Colors.grey.shade600,
-                                  fontStyle: FontStyle.italic,
-                                ),
-                              )
-                            else
-                              Column(
-                                children: _selectedContributors.map((contributor) {
-                                  return Container(
-                                    margin: const EdgeInsets.only(bottom: 8),
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey.shade100,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Icon(PhosphorIconsRegular.user, size: 20),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                '${contributor.firstName} ${contributor.lastName}',
-                                                style: const TextStyle(fontWeight: FontWeight.w500),
-                                              ),
-                                              if (contributor.primaryInstitution != null)
-                                                Text(
-                                                  contributor.primaryInstitution!,
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    color: Colors.grey.shade600,
-                                                  ),
-                                                ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                }).toList(),
-                              ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 20),
+                      // Container(
+                      //   width: double.infinity,
+                      //   padding: const EdgeInsets.all(16),
+                      //   decoration: BoxDecoration(
+                      //     border: Border.all(color: Colors.grey.shade300),
+                      //     borderRadius: BorderRadius.circular(8),
+                      //   ),
+                      //   child: Column(
+                      //     crossAxisAlignment: CrossAxisAlignment.start,
+                      //     children: [
+                      //       Row(
+                      //         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      //         children: [
+                      //           const Text(
+                      //             'Contributors',
+                      //             style: TextStyle(
+                      //               fontWeight: FontWeight.w600,
+                      //               fontSize: 14,
+                      //             ),
+                      //           )
+                      //         ],
+                      //       ),
+                      //       const SizedBox(height: 8),
+                      //       if (_selectedContributors.isEmpty)
+                      //         Text(
+                      //           'No contributors added',
+                      //           style: TextStyle(
+                      //             color: Colors.grey.shade600,
+                      //             fontStyle: FontStyle.italic,
+                      //           ),
+                      //         )
+                      //       else
+                      //         Column(
+                      //           children: _selectedContributors.map((contributor) {
+                      //             return Container(
+                      //               margin: const EdgeInsets.only(bottom: 8),
+                      //               padding: const EdgeInsets.all(12),
+                      //               decoration: BoxDecoration(
+                      //                 color: Colors.grey.shade100,
+                      //                 borderRadius: BorderRadius.circular(8),
+                      //               ),
+                      //               child: Row(
+                      //                 children: [
+                      //                   Icon(PhosphorIconsRegular.user, size: 20),
+                      //                   const SizedBox(width: 8),
+                      //                   Expanded(
+                      //                     child: Column(
+                      //                       crossAxisAlignment: CrossAxisAlignment.start,
+                      //                       children: [
+                      //                         Text(
+                      //                           '${contributor.firstName} ${contributor.lastName}',
+                      //                           style: const TextStyle(fontWeight: FontWeight.w500),
+                      //                         ),
+                      //                         if (contributor.primaryInstitution != null)
+                      //                           Text(
+                      //                             contributor.primaryInstitution!,
+                      //                             style: TextStyle(
+                      //                               fontSize: 12,
+                      //                               color: Colors.grey.shade600,
+                      //                             ),
+                      //                           ),
+                      //                       ],
+                      //                     ),
+                      //                   ),
+                      //                 ],
+                      //               ),
+                      //             );
+                      //           }).toList(),
+                      //         ),
+                      //     ],
+                      //   ),
+                      // ),
+                      // const SizedBox(height: 20),
 
                       // Target Audience Multi-Select
                       buildMultiSelectDropdown(

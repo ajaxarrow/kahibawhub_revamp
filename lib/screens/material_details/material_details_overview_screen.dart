@@ -2,18 +2,62 @@ import 'package:flutter/material.dart';
 
 import '../../models/learning_material.dart';
 import '../../themes/styles.dart';
+import '../../controllers/app_user_controller.dart'; // Add this import
+import '../../models/user_profile.dart'; // Add this import
 
-
-class MaterialDetailsOverviewScreen extends StatelessWidget {
+class MaterialDetailsOverviewScreen extends StatefulWidget {
   const MaterialDetailsOverviewScreen({super.key, required this.material});
 
   final LearningMaterial material;
 
+  @override
+  State<MaterialDetailsOverviewScreen> createState() => _MaterialDetailsOverviewScreenState();
+}
+
+class _MaterialDetailsOverviewScreenState extends State<MaterialDetailsOverviewScreen> {
+  final AppUserController _userController = AppUserController();
+  List<UserProfile> contributors = [];
+  bool isLoadingContributors = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadContributors();
+  }
+
+  Future<void> _loadContributors() async {
+    if (widget.material.contributorIds != null && widget.material.contributorIds!.isNotEmpty) {
+      setState(() {
+        isLoadingContributors = true;
+      });
+
+      try {
+        List<UserProfile> loadedContributors = [];
+        for (String contributorId in widget.material.contributorIds!) {
+          try {
+            final userProfile = await _userController.getUserProfile(userID: contributorId);
+            loadedContributors.add(userProfile);
+          } catch (e) {
+            print('Error loading contributor $contributorId: $e');
+            // Continue loading other contributors even if one fails
+          }
+        }
+
+        setState(() {
+          contributors = loadedContributors;
+          isLoadingContributors = false;
+        });
+      } catch (e) {
+        print('Error loading contributors: $e');
+        setState(() {
+          isLoadingContributors = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-
-
     return SingleChildScrollView(
       child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -26,16 +70,16 @@ class MaterialDetailsOverviewScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8,),
-            material.disciplines!.isNotEmpty
+            widget.material.disciplines!.isNotEmpty
                 ? Column(
               children: [
                 SizedBox(
                   height: 30, // Set a fixed height for the list
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
-                    itemCount: material.disciplines!.length,
+                    itemCount: widget.material.disciplines!.length,
                     itemBuilder: (context, index) {
-                      final discipline = material.disciplines![index];
+                      final discipline = widget.material.disciplines![index];
                       return Container(
                         margin: const EdgeInsets.only(right: 8),
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -60,14 +104,13 @@ class MaterialDetailsOverviewScreen extends StatelessWidget {
               ],
             ) : const SizedBox.shrink(),
             Text(
-                material.description ?? '',
+                widget.material.description ?? '',
                 textAlign: TextAlign.justify
-
             ),
             const SizedBox(height: 16),
 
             // Contributors Section
-            if (material.contributors != null && material.contributors!.isNotEmpty) ...[
+            if (widget.material.contributorIds != null && widget.material.contributorIds!.isNotEmpty) ...[
               Text(
                 'Contributors',
                 style: TextStyle(
@@ -87,16 +130,31 @@ class MaterialDetailsOverviewScreen extends StatelessWidget {
                     width: 1,
                   ),
                 ),
-                child: Column(
+                child: isLoadingContributors
+                    ? const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: CircularProgressIndicator(),
+                  ),
+                )
+                    : contributors.isEmpty
+                    ? const Text(
+                  'No contributors data available',
+                  style: TextStyle(
+                    fontStyle: FontStyle.italic,
+                    color: Colors.grey,
+                  ),
+                )
+                    : Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: material.contributors!.map((contributor) {
+                  children: contributors.map((contributor) {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 8),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '${contributor.firstName} ${contributor.lastName}',
+                            '${contributor.firstName ?? ''} ${contributor.lastName ?? ''}'.trim(),
                             style: const TextStyle(
                               fontWeight: FontWeight.w500,
                               fontSize: 14,
@@ -128,7 +186,7 @@ class MaterialDetailsOverviewScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Material Type', style: detailsLabelStyle),
-                      Text(material.type ?? 'N/A')
+                      Text(widget.material.type ?? 'N/A')
                     ],
                   ),
                 ),
@@ -137,40 +195,13 @@ class MaterialDetailsOverviewScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Primary Author', style: detailsLabelStyle),
-                      // Text(
-                      //   '${material.primaryAuthor?.firstName ?? 'N/A'} ${material.primaryAuthor?.lastName ?? 'N/A'}',
-                      // ),
-                      Text(material.author != '' ? material.author : '${material.authorData?.firstName ?? 'N/A'} ${material.authorData?.lastName ?? 'N/A'}')
+                      Text(widget.material.author != '' ? widget.material.author : '${widget.material.authorData?.firstName ?? 'N/A'} ${widget.material.authorData?.lastName ?? 'N/A'}')
                     ],
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 12),
-            // Row(
-            //   mainAxisAlignment: MainAxisAlignment.end,
-            //   children: [
-            //     Expanded(
-            //       child: Column(
-            //         crossAxisAlignment: CrossAxisAlignment.start,
-            //         children: [
-            //           Text('Date Added', style: detailsLabelStyle),
-            //           Text(DateFormat('MMMM d, y').format(material.dateCreated!)?? 'N/A')
-            //         ],
-            //       ),
-            //     ),
-            //     Expanded(
-            //       child: Column(
-            //         crossAxisAlignment: CrossAxisAlignment.start,
-            //         children: [
-            //           Text('Date Modified', style: detailsLabelStyle),
-            //           Text(DateFormat('MMMM d, y').format(material.dateCreated!)?? 'N/A')
-            //         ],
-            //       ),
-            //     ),
-            //   ],
-            // ),
-            // const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -180,8 +211,8 @@ class MaterialDetailsOverviewScreen extends StatelessWidget {
                     children: [
                       Text('Target Audience', style: detailsLabelStyle),
                       Text(
-                        (material.targetAudience != null && material.targetAudience!.isNotEmpty)
-                            ? material.targetAudience!.join(', ')
+                        (widget.material.targetAudience != null && widget.material.targetAudience!.isNotEmpty)
+                            ? widget.material.targetAudience!.join(', ')
                             : 'N/A',
                       ),
                     ],
@@ -192,7 +223,7 @@ class MaterialDetailsOverviewScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Accessible By', style: detailsLabelStyle),
-                      Text(material.accessibility?.join(', ') ?? 'N/A',)],
+                      Text(widget.material.accessibility?.join(', ') ?? 'N/A',)],
                   ),
                 ),
               ],
@@ -206,40 +237,10 @@ class MaterialDetailsOverviewScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Technical Format', style: detailsLabelStyle),
-                      Text(material.technicalFormat ?? 'N/A'),
-                      // Text('N/A')
+                      Text(widget.material.technicalFormat ?? 'N/A'),
                     ],
                   ),
                 ),
-                // Expanded(
-                //   child: Column(
-                //     crossAxisAlignment: CrossAxisAlignment.start,
-                //     children: [
-                //       const Text('Date Created', style: detailsLabelStyle),
-                //       Text(material.dateCreated ?? '0'),
-                //     ],
-                //   ),
-                // ),
-                // Expanded(
-                //   child: Column(
-                //     crossAxisAlignment: CrossAxisAlignment.start,
-                //     children: [
-                //       Text('Page Numbers', style: detailsLabelStyle),
-                //       // Text(material.title ?? '0'),
-                //       const Text('N/A')
-                //     ],
-                //   ),
-                // ),
-                // Expanded(
-                //   child: Column(
-                //     crossAxisAlignment: CrossAxisAlignment.start,
-                //     children: [
-                //       Text('Word Count', style: detailsLabelStyle),
-                //       // Text(material.title ?? 'N/A'),
-                //       const Text('N/A')
-                //     ],
-                //   ),
-                // ),
               ],
             ),
           ]

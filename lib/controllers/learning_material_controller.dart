@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 
+import '../models/collaboration_request.dart';
 import '../models/contributor.dart';
 import '../models/learning_material.dart';
 import '../models/material_update_request.dart';
@@ -280,6 +281,52 @@ class LearningMaterialController {
     }
   }
 
+  Future<List<CollaborationRequest>> getPendingCollabRequests({required String userID}) async {
+    try {
+      final response = await dio.get('/apiCollaborations/getPendingCollabRequestsFromOtherAuthors/$userID');
+      final data = response.data;
+      List<CollaborationRequest> collaborations = [];
+
+      if (data['data'] != null) {
+        for (var item in data['data']) {
+          collaborations.add(CollaborationRequest.fromMap(item));
+        }
+      }
+
+      return collaborations;
+    } catch (e) {
+      if (e is DioException) {
+        throw Exception('Failed to fetch collaboration requests: ${e.response?.data ?? e.message}');
+      } else {
+        throw Exception('Failed to fetch collaboration requests: ${e.toString()}');
+      }
+    }
+  }
+
+  Future<void> acceptCollaboration({required String requestId, required String authorId}) async {
+    try {
+      await dio.post('/apiCollaborations/acceptCollaboration/$requestId/$authorId');
+    } catch (e) {
+      if (e is DioException) {
+        throw Exception('Failed to accept collaboration: ${e.response?.data ?? e.message}');
+      } else {
+        throw Exception('Failed to accept collaboration: ${e.toString()}');
+      }
+    }
+  }
+
+  Future<void> rejectCollaboration({required String requestId, required String authorId}) async {
+    try {
+      await dio.post('/apiCollaborations/rejectCollaboration/$requestId/$authorId');
+    } catch (e) {
+      if (e is DioException) {
+        throw Exception('Failed to reject collaboration: ${e.response?.data ?? e.message}');
+      } else {
+        throw Exception('Failed to reject collaboration: ${e.toString()}');
+      }
+    }
+  }
+
   // Send material update request (for contributors)
   Future<Map<String, dynamic>> sendMaterialUpdateRequest({
     required String userId,
@@ -292,7 +339,7 @@ class LearningMaterialController {
     required String updatedTechnicalType,
     required List<String> updatedTargetAudience,
     required List<String> updatedDisciplines,
-    required List<Contributor> updatedContributors,
+    // required List<Contributor> updatedContributors,
     int timeSet = 604800,
   }) async {
     try {
@@ -306,9 +353,9 @@ class LearningMaterialController {
         'UpdatedTechnicalType': updatedTechnicalType,
         'UpdatedTargetAudience': jsonEncode(updatedTargetAudience),
         'UpdatedDisciplines': jsonEncode(updatedDisciplines),
-        'UpdatedContributors': jsonEncode(
-            updatedContributors.map((c) => c.toJson()).toList()
-        ),
+        // 'UpdatedContributors': jsonEncode(
+        //     updatedContributors.map((c) => c.toJson()).toList()
+        // ),
         'timeSet': timeSet,
       });
 

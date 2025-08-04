@@ -36,8 +36,12 @@ class _MainLayoutState extends State<MainLayout> {
     //   'label': 'Engagements',
     // },
     {
+      'icon': PhosphorIconsRegular.book,
+      'label': 'Materials',
+    },
+    {
       'icon': PhosphorIconsRegular.handshake,
-      'label': 'Profile',
+      'label': 'Collaborations',
     },
   ];
 
@@ -45,7 +49,7 @@ class _MainLayoutState extends State<MainLayout> {
     '/dashboard',
     // '/engagements',
     '/my-materials',
-    // '/collaborations'
+    '/collaborations'
   ];
 
   @override
