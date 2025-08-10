@@ -27,6 +27,7 @@ class LearningMaterial {
     this.canEdit = false,
     this.fileHash,
     this.hasPendingUpdates = false,
+    this.materialFile
   });
 
   final dynamic id;
@@ -53,6 +54,7 @@ class LearningMaterial {
   bool canEdit;
   AppUser? authorData;
   final bool hasPendingUpdates;
+  final String? materialFile;
 
   factory LearningMaterial.fromMap(Map<String, dynamic> map) {
     // Handle contributors conditionally
@@ -100,6 +102,7 @@ class LearningMaterial {
           ? AppUser.fromMap(map['primaryAuthor'])
           : null,
       hasPendingUpdates: map['hasPendingUpdates'] ?? false,
+      materialFile: map['materialFile'] as String? ?? '',
     );
   }
 

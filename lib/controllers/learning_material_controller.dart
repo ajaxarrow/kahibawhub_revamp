@@ -55,15 +55,23 @@ class LearningMaterialController {
 
   Future<LearningMaterial> fetchLearningMaterialByID({required String userID, required String materialID}) async {
     try {
-      print(userID);
+      print('/apiUpdatematerial/retrieveMaterialToUpdate/$userID/$materialID');
+
       final response = await dio.get(
         '/apiUpdatematerial/retrieveMaterialToUpdate/$userID/$materialID',
       );
       final data = response.data;
       return LearningMaterial.fromMap(data['material']);
     } catch (e) {
-      print('Fetching of Learning Material failed: $e');
-      rethrow;
+      if (e is DioException) {
+        // Print full response for debugging
+        print("DioException occurred:");
+        print("Data: ${e.response?.data}");
+        throw Exception('Failed to fetching material: ${e.response?.data ?? e.message}');
+      } else {
+        print("Unexpected error: $e");
+        throw Exception('Failed to fetching material: ${e.toString()}');
+      }
     }
   }
 
@@ -75,8 +83,15 @@ class LearningMaterialController {
       final data = response.data;
       return LearningMaterial.fromMap(data['materialData']);
     } catch (e) {
-      print('Fetching of Learning Material failed: $e');
-      rethrow;
+      if (e is DioException) {
+        // Print full response for debugging
+        print("DioException occurred:");
+        print("Data: ${e.response?.data}");
+        throw Exception('Failed to fetching material: ${e.response?.data ?? e.message}');
+      } else {
+        print("Unexpected error: $e");
+        throw Exception('Failed to fetching material: ${e.toString()}');
+      }
     }
   }
 
@@ -339,13 +354,12 @@ class LearningMaterialController {
     required String updatedTechnicalType,
     required List<String> updatedTargetAudience,
     required List<String> updatedDisciplines,
-    // required List<Contributor> updatedContributors,
+    required String primaryAuthorID,
+    required List<String> updatedContributors,
     int timeSet = 604800,
   }) async {
     try {
-      print('sending material: $materialId , userid: $userId');
-
-      // Create FormData for multipart upload
+      print(updatedContributors);
       FormData formData = FormData.fromMap({
         'UpdatedMaterialTitle': updatedMaterialTitle,
         'UpdatedMaterialDescription': updatedMaterialDescription,
@@ -353,10 +367,12 @@ class LearningMaterialController {
         'UpdatedTechnicalType': updatedTechnicalType,
         'UpdatedTargetAudience': jsonEncode(updatedTargetAudience),
         'UpdatedDisciplines': jsonEncode(updatedDisciplines),
-        // 'UpdatedContributors': jsonEncode(
-        //     updatedContributors.map((c) => c.toJson()).toList()
-        // ),
+        'UpdatedContributors': jsonEncode(updatedContributors),
+        'UpdatedPrimaryAuthor': primaryAuthorID,
         'timeSet': timeSet,
+        // 'requestedTo': jsonEncode([
+        //   {'authorId': primaryAuthorID}
+        // ]),
       });
 
       // Add files if provided
@@ -396,7 +412,7 @@ class LearningMaterialController {
       };
     } catch (e) {
       if (e is DioException) {
-        print("Error sending update request: ${e.response?.data}");
+        print("Error sending update request failed: ${e.response?.data}");
         return {
           'success': false,
           'message': e.response?.data['message'] ?? 'Failed to send update request'

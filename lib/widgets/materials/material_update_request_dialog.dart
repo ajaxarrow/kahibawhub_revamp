@@ -43,12 +43,13 @@ class _MaterialUpdateRequestDialogState extends ConsumerState<MaterialUpdateRequ
   String? _imageFileName;
   String? _technicalFormat;
   String selectedMaterialType = 'Not Specified';
+  String _primaryAuthorID = '';
 
   // Selection variables
   List<String> _selectedTargetAudience = [];
   List<String> _selectedDisciplines = [];
   List<String> _selectedAccessibility = [];
-  List<Contributor> _selectedContributors = [];
+  List<String> _selectedContributors = [];
 
   // Loading state
   bool _isLoading = false;
@@ -77,7 +78,8 @@ class _MaterialUpdateRequestDialogState extends ConsumerState<MaterialUpdateRequ
     _selectedTargetAudience = List<String>.from(material.targetAudience ?? []);
     _selectedDisciplines = List<String>.from(material.disciplines ?? []);
     _selectedAccessibility = List<String>.from(material.accessibility ?? []);
-    _selectedContributors = List<Contributor>.from(material.contributors ?? []);
+    _selectedContributors = List<String>.from(material.contributorIds ?? []);
+    _primaryAuthorID = material.authorData?.id ?? '';
   }
 
   String _getFileExtension(String fileName) {
@@ -173,7 +175,8 @@ class _MaterialUpdateRequestDialogState extends ConsumerState<MaterialUpdateRequ
         updatedTechnicalType: _technicalFormat ?? widget.material.technicalFormat ?? '',
         updatedDisciplines: _selectedDisciplines,
         updatedTargetAudience: _selectedTargetAudience,
-        // updatedContributors: _selectedContributors,
+        primaryAuthorID: _primaryAuthorID,
+        updatedContributors: _selectedContributors,
       );
 
       if (result['success']) {

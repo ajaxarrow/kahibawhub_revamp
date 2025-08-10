@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kahibawhub_revamp/controllers/app_user_controller.dart';
@@ -9,6 +8,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
+import 'package:http/http.dart' as http;
 import '../models/learning_material.dart';
 import '../controllers/learning_material_controller.dart';
 import '../models/user_profile.dart';
@@ -78,17 +78,6 @@ class _MaterialDetailsLayoutState extends ConsumerState<MaterialDetailsLayout> {
       if (user.id == completeMaterial.authorData?.id) {
         completeMaterial.canEdit = true;
       }
-
-      // 🟡 Fetch only contributors from another call
-      final materialWithContributors =
-      await _controller.fetchLearningMaterialByIDWithMaterialFile(
-        userID: user.id!,
-        materialID: widget.material.id,
-        fileHash: completeMaterial.fileHash!,
-      );
-
-      // ✅ Only update the contributors
-      completeMaterial.contributors = materialWithContributors.contributors;
 
       // Update UI
       setState(() {
@@ -361,7 +350,7 @@ class _MaterialDetailsLayoutState extends ConsumerState<MaterialDetailsLayout> {
                         [
                           userProfile?.firstName,
                           userProfile?.lastName
-                        ].where((s) => s?.isNotEmpty == true).join(' ') // combine non-empty names
+                        ].where((s) => s?.isNotEmpty == true).join(' ')
                             .trim()
                             .isNotEmpty
                             ? '${userProfile?.firstName ?? ''} ${userProfile?.lastName ?? ''}'.trim()
@@ -412,24 +401,36 @@ class _MaterialDetailsLayoutState extends ConsumerState<MaterialDetailsLayout> {
     });
 
     try {
-      final user = ref.read(userProvider);
+      final material = _completeMaterial!;
 
-      // Fetch material without file hash
-      final materialWithFile = await _controller.fetchLearningMaterialByIDWithMaterialFile(
-        userID: user!.id!,
-        materialID: widget.material.id,
-        fileHash: _completeMaterial!.fileHash!,
-      );
+      if (material.materialFile == null || material.materialFile!.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No file available for download'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
 
-      if (materialWithFile.file != null) {
+      // Download file from URL
+      final response = await http.get(Uri.parse(material.materialFile!));
+
+      if (response.statusCode == 200) {
+        // Get file extension from URL or content type
+        String fileExtension = _getFileExtensionFromUrl(material.materialFile!);
+        if (fileExtension.isEmpty) {
+          fileExtension = _getFileExtensionFromContentType(response.headers['content-type'] ?? '');
+        }
+
         // Save file and get the download path
-        final downloadPath = await _saveFile(
-            materialWithFile.file.toString(),
-            _completeMaterial!.title ?? 'document'
+        final downloadPath = await _saveFileFromBytes(
+          response.bodyBytes,
+          material.title ?? 'document',
+          fileExtension,
         );
 
         if (downloadPath != null) {
-          // Show success snackbar with download path and file manager button
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Column(
@@ -448,6 +449,8 @@ class _MaterialDetailsLayoutState extends ConsumerState<MaterialDetailsLayout> {
             ),
           );
         }
+      } else {
+        throw Exception('Failed to download file: ${response.statusCode}');
       }
     } catch (e) {
       print('Error downloading file: $e');
@@ -470,30 +473,41 @@ class _MaterialDetailsLayoutState extends ConsumerState<MaterialDetailsLayout> {
     });
 
     try {
-      final user = ref.read(userProvider);
+      final material = _completeMaterial!;
 
-      // Fetch material with file
-      final materialWithFile = await _controller.fetchLearningMaterialByIDWithMaterialFile(
-        userID: user!.id!,
-        materialID: widget.material.id,
-        fileHash: _completeMaterial!.fileHash!,
-      );
+      if (material.materialFile == null || material.materialFile!.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No file available for preview'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
 
-      if (materialWithFile.file != null) {
-        final fileData = materialWithFile.file.toString();
-        final mimeType = _getMimeTypeFromBase64(fileData);
+      // First, download the file to determine its type from content-type header
+      final response = await http.head(Uri.parse(material.materialFile!));
+
+      if (response.statusCode == 200) {
+        final contentType = response.headers['content-type'] ?? '';
 
         // Check if file type is supported for preview
-        if (mimeType == 'application/pdf' || mimeType == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-          _showPreviewModal(fileData, mimeType);
+        if (contentType.contains('application/pdf')) {
+          _showPreviewModal(material.materialFile!, 'application/pdf');
         } else {
+          // If preview not supported, automatically download
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Preview is not available for this file type'),
+              content: Text('Preview not supported for this file type. Downloading instead...'),
               backgroundColor: Colors.orange,
+              duration: Duration(seconds: 2),
             ),
           );
+          // Start download automatically
+          downloadFile();
         }
+      } else {
+        throw Exception('Failed to check file type: ${response.statusCode}');
       }
     } catch (e) {
       print('Error previewing file: $e');
@@ -510,14 +524,49 @@ class _MaterialDetailsLayoutState extends ConsumerState<MaterialDetailsLayout> {
     }
   }
 
-  String _getMimeTypeFromBase64(String fileData) {
-    if (fileData.startsWith('data:')) {
-      return fileData.split(';')[0].split(':')[1];
+  String _getFileExtensionFromUrl(String url) {
+    try {
+      Uri uri = Uri.parse(url);
+      String path = uri.path;
+      if (path.contains('.')) {
+        return path.substring(path.lastIndexOf('.'));
+      }
+      return '';
+    } catch (e) {
+      return '';
     }
-    return '';
   }
 
-  void _showPreviewModal(String fileData, String mimeType) {
+  String _getFileExtensionFromContentType(String contentType) {
+    switch (contentType.toLowerCase()) {
+      case 'application/pdf':
+        return '.pdf';
+      case 'image/jpeg':
+        return '.jpg';
+      case 'image/png':
+        return '.png';
+      case 'image/gif':
+        return '.gif';
+      case 'text/plain':
+        return '.txt';
+      case 'application/msword':
+        return '.doc';
+      case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+        return '.docx';
+      case 'application/vnd.ms-excel':
+        return '.xls';
+      case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
+        return '.xlsx';
+      case 'application/vnd.ms-powerpoint':
+        return '.ppt';
+      case 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
+        return '.pptx';
+      default:
+        return '';
+    }
+  }
+
+  void _showPreviewModal(String fileUrl, String mimeType) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -552,9 +601,9 @@ class _MaterialDetailsLayoutState extends ConsumerState<MaterialDetailsLayout> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
+                    const Text(
                       'Preview: Document',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
@@ -567,9 +616,9 @@ class _MaterialDetailsLayoutState extends ConsumerState<MaterialDetailsLayout> {
                 ),
               ),
               const Divider(height: 1),
-              // Content - Fixed: Remove SizedBox and use Expanded directly
+              // Content
               Expanded(
-                child: _buildPreviewContent(fileData, mimeType),
+                child: _buildPreviewContent(fileUrl, mimeType),
               )
             ],
           ),
@@ -578,14 +627,12 @@ class _MaterialDetailsLayoutState extends ConsumerState<MaterialDetailsLayout> {
     );
   }
 
-  Widget _buildPreviewContent(String fileData, String mimeType) {
+  Widget _buildPreviewContent(String fileUrl, String mimeType) {
     if (mimeType == 'application/pdf') {
-      return _buildPdfPreview(fileData);
-    }
-    // else if (mimeType == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-    //   return _buildDocxPreview(fileData);
-    // }
-    else {
+      return _buildPdfPreview(fileUrl);
+    } else if (mimeType.contains('image/')) {
+      return _buildImagePreview(fileUrl);
+    } else {
       return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -602,9 +649,45 @@ class _MaterialDetailsLayoutState extends ConsumerState<MaterialDetailsLayout> {
     }
   }
 
-  Widget _buildPdfPreview(String fileData) {
+  Widget _buildImagePreview(String imageUrl) {
+    return Center(
+      child: InteractiveViewer(
+        child: Image.network(
+          imageUrl,
+          fit: BoxFit.contain,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Loading image...'),
+                ],
+              ),
+            );
+          },
+          errorBuilder: (context, error, stackTrace) {
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  PhosphorIcon(PhosphorIconsRegular.warning, size: 64, color: Colors.red),
+                  SizedBox(height: 16),
+                  Text('Error loading image'),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPdfPreview(String fileUrl) {
     return FutureBuilder<File>(
-      future: _createTempFile(fileData, 'pdf'),
+      future: _downloadTempFile(fileUrl, 'pdf'),
       builder: (context, snapshot) {
         if (snapshot.hasData) {
           return PDFView(
@@ -644,20 +727,20 @@ class _MaterialDetailsLayoutState extends ConsumerState<MaterialDetailsLayout> {
     );
   }
 
-  Future<File> _createTempFile(String fileData, String extension) async {
-    String base64Data = fileData;
-    if (fileData.contains(',')) {
-      base64Data = fileData.split(',').last;
+  Future<File> _downloadTempFile(String fileUrl, String extension) async {
+    final response = await http.get(Uri.parse(fileUrl));
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to download file for preview');
     }
 
-    final bytes = base64Decode(base64Data);
     final tempDir = await getTemporaryDirectory();
     final tempFile = File('${tempDir.path}/temp_preview.$extension');
-    await tempFile.writeAsBytes(bytes);
+    await tempFile.writeAsBytes(response.bodyBytes);
     return tempFile;
   }
 
-  Future<String?> _saveFile(String fileData, String fileName) async {
+  Future<String?> _saveFileFromBytes(List<int> bytes, String fileName, String extension) async {
     try {
       // Request storage permission for Android
       if (Platform.isAndroid) {
@@ -670,31 +753,15 @@ class _MaterialDetailsLayoutState extends ConsumerState<MaterialDetailsLayout> {
         }
       }
 
-      String base64Data = fileData;
-      if (fileData.contains(',')) {
-        base64Data = fileData.split(',').last;
-      }
-
-      // Decode base64 to bytes
-      final bytes = base64Decode(base64Data);
-
-      // Get file extension from data URL if present
-      String fileExtension = '';
-      if (fileData.startsWith('data:')) {
-        final mimeType = fileData.split(';')[0].split(':')[1];
-        fileExtension = _getFileExtensionFromMimeType(mimeType);
-      }
-
       // Clean filename and add extension
       final cleanFileName = fileName.replaceAll(RegExp(r'[^\w\s-]'), '');
-      final finalFileName = fileExtension.isNotEmpty
-          ? '$cleanFileName$fileExtension'
+      final finalFileName = extension.isNotEmpty
+          ? '$cleanFileName$extension'
           : cleanFileName;
 
       // Get appropriate directory based on platform
       Directory directory;
       if (Platform.isAndroid) {
-        // Try to get Downloads directory, fallback to external storage
         try {
           directory = Directory('/storage/emulated/0/Download');
           if (!directory.existsSync()) {
@@ -730,35 +797,6 @@ class _MaterialDetailsLayoutState extends ConsumerState<MaterialDetailsLayout> {
         ),
       );
       return null;
-    }
-  }
-
-  String _getFileExtensionFromMimeType(String mimeType) {
-    switch (mimeType) {
-      case 'application/pdf':
-        return '.pdf';
-      case 'image/jpeg':
-        return '.jpg';
-      case 'image/png':
-        return '.png';
-      case 'image/gif':
-        return '.gif';
-      case 'text/plain':
-        return '.txt';
-      case 'application/msword':
-        return '.doc';
-      case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
-        return '.docx';
-      case 'application/vnd.ms-excel':
-        return '.xls';
-      case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
-        return '.xlsx';
-      case 'application/vnd.ms-powerpoint':
-        return '.ppt';
-      case 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
-        return '.pptx';
-      default:
-        return '';
     }
   }
 
@@ -893,7 +931,6 @@ class _MaterialDetailsLayoutState extends ConsumerState<MaterialDetailsLayout> {
               const Divider(),
             ],
 
-
             ListTile(
               leading: _isPreviewing
                   ? const SizedBox(
@@ -902,8 +939,8 @@ class _MaterialDetailsLayoutState extends ConsumerState<MaterialDetailsLayout> {
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
                   : PhosphorIcon(PhosphorIconsRegular.eye, color: Colors.blue),
-              title: const Text('Preview'),
-              subtitle: const Text('Preview the material content'),
+              title: const Text('Preview / Download'),
+              subtitle: const Text('Preview if supported, otherwise download'),
               onTap: _isPreviewing ? null : () {
                 Navigator.pop(context);
                 previewFile();
@@ -947,7 +984,6 @@ class _MaterialDetailsLayoutState extends ConsumerState<MaterialDetailsLayout> {
     );
   }
 
-
   void _showUpdateRequestDialog() {
     showModalBottomSheet(
       context: context,
@@ -972,14 +1008,12 @@ class _MaterialDetailsLayoutState extends ConsumerState<MaterialDetailsLayout> {
   }
 
   void _shareMaterial() {
-    // Implement share functionality
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Share functionality not implemented yet')),
     );
   }
 
   void _reportMaterial() {
-    // Implement report functionality
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Report functionality not implemented yet')),
     );
