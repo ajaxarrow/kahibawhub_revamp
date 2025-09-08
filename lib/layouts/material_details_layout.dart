@@ -869,55 +869,55 @@ class _MaterialDetailsLayoutState extends ConsumerState<MaterialDetailsLayout> {
               const Divider(),
             ],
 
-            if (isContributor && !isPrimaryAuthor) ...[
-              ListTile(
-                leading: PhosphorIcon(PhosphorIconsRegular.gitPullRequest, color: Colors.blue),
-                title: const Text('Request Update'),
-                subtitle: const Text('Propose changes to the material'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showUpdateRequestDialog();
-                },
-              ),
-              const Divider(),
-            ],
+            // if (isContributor && !isPrimaryAuthor) ...[
+            //   ListTile(
+            //     leading: PhosphorIcon(PhosphorIconsRegular.gitPullRequest, color: Colors.blue),
+            //     title: const Text('Request Update'),
+            //     subtitle: const Text('Propose changes to the material'),
+            //     onTap: () {
+            //       Navigator.pop(context);
+            //       _showUpdateRequestDialog();
+            //     },
+            //   ),
+            //   const Divider(),
+            // ],
 
-            if (isPrimaryAuthor) ...[
-              ListTile(
-                leading: PhosphorIcon(
-                  PhosphorIconsRegular.clockClockwise,
-                  color: material.hasPendingUpdates ? Colors.orange : Colors.grey,
-                ),
-                title: const Text('Pending Updates'),
-                subtitle: Text(
-                  material.hasPendingUpdates
-                      ? 'Review and manage update requests'
-                      : 'No pending update requests',
-                ),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showPendingUpdatesModal();
-                },
-                trailing: material.hasPendingUpdates
-                    ? Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.orange,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Text(
-                    'NEW',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                )
-                    : null,
-              ),
-              const Divider(),
-            ],
+            // if (isPrimaryAuthor) ...[
+            //   ListTile(
+            //     leading: PhosphorIcon(
+            //       PhosphorIconsRegular.clockClockwise,
+            //       color: material.hasPendingUpdates ? Colors.orange : Colors.grey,
+            //     ),
+            //     title: const Text('Pending Updates'),
+            //     subtitle: Text(
+            //       material.hasPendingUpdates
+            //           ? 'Review and manage update requests'
+            //           : 'No pending update requests',
+            //     ),
+            //     onTap: () {
+            //       Navigator.pop(context);
+            //       _showPendingUpdatesModal();
+            //     },
+            //     trailing: material.hasPendingUpdates
+            //         ? Container(
+            //       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            //       decoration: BoxDecoration(
+            //         color: Colors.orange,
+            //         borderRadius: BorderRadius.circular(12),
+            //       ),
+            //       child: const Text(
+            //         'NEW',
+            //         style: TextStyle(
+            //           color: Colors.white,
+            //           fontSize: 10,
+            //           fontWeight: FontWeight.w600,
+            //         ),
+            //       ),
+            //     )
+            //         : null,
+            //   ),
+            //   const Divider(),
+            // ],
             if (isPrimaryAuthor) ...[
               ListTile(
                 leading: PhosphorIcon(PhosphorIconsRegular.users, color: Colors.purple),

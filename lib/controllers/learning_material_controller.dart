@@ -217,6 +217,7 @@ class LearningMaterialController {
         ));
       }
 
+
       final response = await dio.put(
         '/apiUpdateMaterial/updateMaterial/$materialId/$userId',
         data: formData,
@@ -224,6 +225,7 @@ class LearningMaterialController {
           contentType: 'multipart/form-data',
         ),
       );
+
 
       return {
         'success': true,
@@ -367,9 +369,9 @@ class LearningMaterialController {
         'UpdatedTechnicalType': updatedTechnicalType,
         'UpdatedTargetAudience': jsonEncode(updatedTargetAudience),
         'UpdatedDisciplines': jsonEncode(updatedDisciplines),
-        'UpdatedContributors': jsonEncode(updatedContributors),
+        'UpdatedContributors': updatedContributors,
         'UpdatedPrimaryAuthor': primaryAuthorID,
-        'timeSet': timeSet,
+        'timeSet': timeSet.toString(),
         // 'requestedTo': jsonEncode([
         //   {'authorId': primaryAuthorID}
         // ]),
@@ -396,6 +398,14 @@ class LearningMaterialController {
         ));
       }
 
+      print("=== Raw FormData ===");
+      formData.fields.forEach((field) {
+        print("${field.key}: ${field.value}");
+      });
+      formData.files.forEach((file) {
+        print("${file.key}: ${file.value.filename}");
+      });
+      print('/apiUpdatematerial/sendMaterialUpdateRequest/$userId/$materialId');
       final response = await dio.post(
         '/apiUpdatematerial/sendMaterialUpdateRequest/$userId/$materialId',
         data: formData,
