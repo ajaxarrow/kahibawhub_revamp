@@ -25,7 +25,7 @@ class AppUser {
       id: map['_id'],
       firstName: map['firstName'],
       lastName: map['lastName'],
-      email: map['email'],
+      email: map['userName'],
       dateRegistered: map['dateRegistered'],
       userProfile: map['userProfile'] != null ? UserProfile.fromMap(map['userProfile']) : null,
     );

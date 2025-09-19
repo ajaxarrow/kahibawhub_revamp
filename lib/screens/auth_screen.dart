@@ -190,10 +190,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   ) : const SizedBox.shrink(),
                   isRegister ? const SizedBox(height: 10) : const SizedBox.shrink(),
                   CustomTextFormField(
-                    label: 'Email',
-                    hintText: 'Enter your email',
+                    label: 'Username',
+                    hintText: 'Enter your username',
                     controller: _emailController,
-                    prefixIcon: Icons.email_outlined,
+                    prefixIcon: Icons.person_outline_outlined,
                   ),
                   const SizedBox(height: 10),
                   CustomTextFormField(

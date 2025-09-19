@@ -69,7 +69,7 @@ class UserProfile {
       twitterLink: map['twitterLink'],
       instagramLink: map['instagramLink'],
       linkedinLink: map['linkedinLink'],
-      email: map['email'],
+      email: map['userName'],
       occupation: map['occupation'],
     );
   }

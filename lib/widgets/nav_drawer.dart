@@ -38,7 +38,7 @@ class _NavDrawerState extends ConsumerState<NavDrawer> {
                   : 'Guest',
             ),
             accountEmail: Text(
-              isLoggedIn && user != null ? user.email! : '',
+              '',
             ),
             currentAccountPicture: CircleAvatar(
               radius: 12,

@@ -60,7 +60,7 @@ class ProfileScreen extends ConsumerWidget {
                                   ),
                                 ),
                                 Text(
-                                  userData?.userProfile?.email ?? userData?.email ?? 'N/A',
+                                  userData?.email ?? userData?.email ?? 'N/A',
                                   style: const TextStyle(
                                       fontWeight: FontWeight.w400,
                                       fontSize: 14

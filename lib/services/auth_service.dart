@@ -20,7 +20,7 @@ class AuthService{
         data: {
           "firstName": firstName,
           "lastName": lastName,
-          "email": email,
+          "userName": email,
           "password": password,
         },
       );
@@ -68,7 +68,7 @@ class AuthService{
       final response = await dio.post(
         '/apiAuthentication/userLogin',
         data: {
-          "email": email,
+          "userName": email,
           "password": password,
         },
       );
