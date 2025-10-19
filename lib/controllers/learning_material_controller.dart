@@ -245,10 +245,9 @@ class LearningMaterialController {
 
   Future<bool> deleteMaterial({
     required String materialId,
-    required String userId,
   }) async {
     try {
-      await dio.delete('/apiAddMaterial/deleteMaterial/$materialId/$userId');
+      await dio.put('/apiMaterialTransactions/deleteMaterial/$materialId');
       return true;
     } catch (e) {
       print("Error deleting material: $e");

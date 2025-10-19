@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../layouts/material_details_layout.dart';
 import '../../models/learning_material.dart';
+import '../../providers/auth_provider.dart';
 import '../../utils/base64_image_utils.dart';
+import '../../utils/material_accessibility_utils.dart';
 
 enum CardType {large, small}
 
-class MaterialItem extends StatelessWidget {
+class MaterialItem extends ConsumerWidget {
   const MaterialItem({
     super.key,
     required this.material,
@@ -17,19 +20,29 @@ class MaterialItem extends StatelessWidget {
   final LearningMaterial material;
   final CardType materialCardType;
 
+  void _handleMaterialTap(BuildContext context, WidgetRef ref) {
+    final user = ref.read(userProvider);
+    
+    // Check accessibility
+    if (!MaterialAccessibilityUtils.canUserAccessMaterial(user, material)) {
+      MaterialAccessibilityUtils.showAccessibilityDialog(context, material);
+      return;
+    }
+    
+    // Navigate to material details if accessible
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => MaterialDetailsLayout(material: material))
+    );
+  }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     String description = (material.description ?? 'N/A');
     int descLength = materialCardType == CardType.large ? 50 : 25;
     description = description.length > descLength ? '${description.substring(0, descLength)}...' : description;
 
     return GestureDetector(
-      onTap: (){
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (context) => MaterialDetailsLayout(material: material))
-        );
-      },
+      onTap: () => _handleMaterialTap(context, ref),
       child: materialCardType == CardType.large ? Card(
           elevation: 0,
           child: Container(

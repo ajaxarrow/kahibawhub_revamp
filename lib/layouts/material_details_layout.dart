@@ -5,7 +5,6 @@ import 'package:kahibawhub_revamp/controllers/app_user_controller.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
-import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:http/http.dart' as http;
@@ -867,6 +866,17 @@ class _MaterialDetailsLayoutState extends ConsumerState<MaterialDetailsLayout> {
                 },
               ),
               const Divider(),
+              
+              ListTile(
+                leading: PhosphorIcon(PhosphorIconsRegular.trash, color: Colors.red),
+                title: const Text('Delete Material'),
+                subtitle: const Text('Permanently remove this material'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showDeleteConfirmationDialog();
+                },
+              ),
+              const Divider(),
             ],
 
             // if (isContributor && !isPrimaryAuthor) ...[
@@ -1017,6 +1027,177 @@ class _MaterialDetailsLayoutState extends ConsumerState<MaterialDetailsLayout> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Report functionality not implemented yet')),
     );
+  }
+
+  void _showDeleteConfirmationDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              PhosphorIcon(
+                PhosphorIconsRegular.warning,
+                color: Colors.red.shade600,
+                size: 24,
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Delete Material',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Are you sure you want to delete "${_completeMaterial?.title ?? 'this material'}"?',
+                style: const TextStyle(
+                  fontSize: 14,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: Colors.red.shade200,
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    PhosphorIcon(
+                      PhosphorIconsRegular.warning,
+                      color: Colors.red.shade600,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'This action cannot be undone. All data associated with this material will be permanently deleted.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.red,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color: Colors.grey.shade600,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _deleteMaterial();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.shade600,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                'Delete',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _deleteMaterial() async {
+    final user = ref.read(userProvider);
+    final material = _completeMaterial;
+    
+    if (widget.material.id == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unable to delete material: Missing user or material information'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return const AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 16),
+              Text('Deleting material...'),
+            ],
+          ),
+        );
+      },
+    );
+
+    try {
+      final success = await _controller.deleteMaterial(
+        materialId: widget.material.id);
+
+      // Close loading dialog
+      Navigator.of(context).pop();
+
+      if (success) {
+        // Show success message and navigate back
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Material deleted successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        
+        // Navigate back to materials page
+        Navigator.of(context).pushReplacementNamed('/my-materials');
+      } else {
+        throw Exception('Failed to delete material');
+      }
+    } catch (e) {
+      // Close loading dialog if still open
+      Navigator.of(context).pop();
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error deleting material: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
